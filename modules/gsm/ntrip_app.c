@@ -324,8 +324,9 @@ static void ntrip_tcp_recv_task(void *pvParameter)
   }
 
   // ========================================
-  // 2단계: 초기 연결 (소켓 생성 + 서버 연결 + HTTP 헤더 전송) - 재시도
+  // 2단계: 초기 연결 (소켓 생성 + 서버 연결) - 재시도
   // ========================================
+  // 참고: ntrip_connect_to_server()가 TCP 연결, HTTP 요청 전송, 응답 수신을 모두 처리
   int init_retry = 0;
   bool init_success = false;
 
@@ -345,49 +346,18 @@ static void ntrip_tcp_recv_task(void *pvParameter)
     LOG_INFO("TCP 소켓 생성 완료");
     g_ntrip_socket = sock;
 
-    // 2-2. 서버 연결
+    // 2-2. NTRIP 서버 연결 (TCP 연결 + HTTP 요청 + 응답 수신 포함)
     if (ntrip_connect_to_server(sock) != 0)
     {
       init_retry++;
-      LOG_ERR("서버 연결 실패, 재시도 대기... (%d/%d)", init_retry, NTRIP_INIT_MAX_RETRY);
+      LOG_ERR("NTRIP 서버 연결 실패, 재시도 대기... (%d/%d)", init_retry, NTRIP_INIT_MAX_RETRY);
       tcp_socket_destroy(sock);
       sock = NULL;
       g_ntrip_socket = NULL;
       vTaskDelay(pdMS_TO_TICKS(NTRIP_INIT_RETRY_BASE_DELAY_MS * init_retry));
       continue;
     }
-    LOG_INFO("서버 연결 완료");
-
-    // 2-3. HTTP 헤더 전송
-    ret = tcp_send(sock, (const uint8_t *)g_ntrip_http_request,
-                   strlen(g_ntrip_http_request));
-    if (ret < 0)
-    {
-      init_retry++;
-      LOG_ERR("HTTP 헤더 전송 실패: %d, 재시도 대기... (%d/%d)", ret, init_retry, NTRIP_INIT_MAX_RETRY);
-      tcp_close(sock);
-      tcp_socket_destroy(sock);
-      sock = NULL;
-      g_ntrip_socket = NULL;
-      vTaskDelay(pdMS_TO_TICKS(NTRIP_INIT_RETRY_BASE_DELAY_MS * init_retry));
-      continue;
-    }
-    LOG_INFO("HTTP 헤더 전송 완료");
-
-    // 2-4. 초기 응답 수신 (ICY 200 OK)
-    ret = tcp_recv(sock, recv_buf, sizeof(recv_buf), 0);
-    if (ret < 0)
-    {
-      init_retry++;
-      LOG_ERR("초기 응답 수신 실패: %d, 재시도 대기... (%d/%d)", ret, init_retry, NTRIP_INIT_MAX_RETRY);
-      tcp_close(sock);
-      tcp_socket_destroy(sock);
-      sock = NULL;
-      g_ntrip_socket = NULL;
-      vTaskDelay(pdMS_TO_TICKS(NTRIP_INIT_RETRY_BASE_DELAY_MS * init_retry));
-      continue;
-    }
-    LOG_INFO("초기 응답 수신 완료 (%d bytes)", ret);
+    LOG_INFO("NTRIP 서버 연결 완료 (HTTP 요청/응답 포함)");
 
     // 모든 초기화 단계 성공
     init_success = true;
