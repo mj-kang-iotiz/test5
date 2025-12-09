@@ -159,7 +159,7 @@ int gsm_port_power_on(void) {
 
   vTaskDelay(pdMS_TO_TICKS(200)); // 200ms 대기 (안정화)
 
- 
+
 
   // PWRKEY 핀 HIGH: 전원 ON 시작
 
@@ -167,13 +167,13 @@ int gsm_port_power_on(void) {
 
   vTaskDelay(pdMS_TO_TICKS(1000)); // 1000ms 유지 (최소 500ms)
 
- 
+
 
   // PWRKEY 핀 LOW: 정상 동작 모드로 전환
 
   HAL_GPIO_WritePin(GSM_PORT_GPIO_PORT, GSM_PORT_GPIO_PWR_PIN, GPIO_PIN_RESET);
 
- 
+
 
   // 부팅 초기 대기 (3초)
 
@@ -181,7 +181,7 @@ int gsm_port_power_on(void) {
 
   vTaskDelay(pdMS_TO_TICKS(3000));
 
- 
+
 
   return 0;
 
@@ -294,18 +294,18 @@ void gsm_port_power_off(void) {
 
   vTaskDelay(pdMS_TO_TICKS(700)); // 700ms 유지 (최소 650ms)
 
- 
+
 
   // PWRKEY 핀 LOW: 정상 상태로 복귀
 
   HAL_GPIO_WritePin(GSM_PORT_GPIO_PORT, GSM_PORT_GPIO_PWR_PIN, GPIO_PIN_RESET);
 
- 
 
-  // Power down 완료 대기 (1초)
 
-  // 참고: "POWERED DOWN" URC는 자동 수신됨
+  // Power down 완료 대기 (3초로 증가)
 
-  vTaskDelay(pdMS_TO_TICKS(1000));
+  // 참고: "POWERED DOWN" URC 수신 후에도 모듈 완전 종료까지 시간 필요
+
+  vTaskDelay(pdMS_TO_TICKS(3000));
 
 }
