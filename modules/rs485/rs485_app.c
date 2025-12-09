@@ -511,18 +511,14 @@ static void rs485_task(void *pvParameter)
 
       if (strncmp(cmd, "LTE", 3) == 0)
       {
-//        lora_instance_deinit();
+        lora_instance_deinit(); // LORA 중지
         gsm_start_rover();
         RS485_Send("+GUGUSTART-LTE", strlen("+GUGUSTART-LTE"));
         is_gugu_started = true;
       }
       else if (strncmp(cmd, "LORA", 4) == 0)
       {
-//        ntrip_stop();
-//        vTaskDelay(pdMS_TO_TICKS(100));
-//        gsm_at_power_off(1);
-//        lte_reset_state();
-//        vTaskDelay(pdMS_TO_TICKS(2000));
+        gsm_stop_rover(); // GSM 중지
         lora_start_rover();
         RS485_Send("+GUGUSTART-LORA", strlen("+GUGUSTART-LORA"));
         is_gugu_started = true;
@@ -536,12 +532,9 @@ static void rs485_task(void *pvParameter)
     {
       is_gugu_started = false;
       lora_instance_deinit();
-      // ntrip_stop();
-      // vTaskDelay(pdMS_TO_TICKS(100));
-      // gsm_at_power_off(1);
-      // vTaskDelay(pdMS_TO_TICKS(2000));
-      // gsm_port_power_off();
-      // lte_reset_state();
+
+      // GSM 모듈 정리 (NTRIP 중지 → AT 명령 종료 → 상태 리셋)
+      gsm_stop_rover();
 
       RS485_Send((uint8_t *)STOP_Response, strlen(STOP_Response));
     }

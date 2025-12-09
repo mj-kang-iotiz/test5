@@ -19,6 +19,7 @@ char gsm_mem[2048];
 gsm_t gsm_handle;
 QueueHandle_t gsm_queue;
 static bool gsm_task_created = false;
+static bool gsm_power_on = false; // GSM 모듈 전원 상태 추적
 
 void gsm_socket_monitor_stop(void);
 void gsm_socket_update_recv_time(uint8_t connect_id);
@@ -46,13 +47,43 @@ void gsm_start_rover(void) {
   if(!gsm_task_created)
   {
     gsm_task_create(NULL);
+    gsm_power_on = true;
+  }
+  else if (!gsm_power_on)
+  {
+    // 태스크는 있지만 전원이 꺼진 경우에만 켜기
+    gsm_port_power_on();
+    gsm_power_on = true;
   }
   else
   {
-    gsm_port_power_on();
+    LOG_INFO("GSM 모듈이 이미 켜져 있습니다");
   }
 
   LOG_INFO("LTE 전원 ON 완료, RDY 대기 중...");
+}
+
+void gsm_stop_rover(void) {
+  LOG_INFO("Rover 모드 LTE 중지 시작");
+
+  if (!gsm_power_on) {
+    LOG_INFO("GSM 모듈이 이미 꺼져 있습니다");
+    return;
+  }
+
+  // 1. NTRIP 태스크 중지
+  ntrip_stop();
+  vTaskDelay(pdMS_TO_TICKS(100));
+
+  // 2. AT 명령으로 정상 종료 (mode=1: normal power down)
+  LOG_INFO("GSM 모듈 정상 종료 시작 (AT+QPOWD=1)");
+  gsm_at_power_off(1);
+
+  // 3. POWERED DOWN URC 대기 (최대 5초)
+  // 이벤트 핸들러에서 gsm_power_on = false 설정됨
+  vTaskDelay(pdMS_TO_TICKS(5000));
+
+  LOG_INFO("LTE 중지 완료");
 }
 
 static TaskHandle_t ntrip_task_handle = NULL;
@@ -127,9 +158,10 @@ static void gsm_evt_handler(gsm_evt_t evt, void *args) {
     break;
 
   case GSM_EVT_POWERED_DOWN:
-    // lte_reset_state();
-	  LOG_INFO("GSM POWERED DOWN");
-	 break;
+    LOG_INFO("GSM POWERED DOWN");
+    gsm_power_on = false;
+    lte_reset_state();
+    break;
 
   default:
     break;
