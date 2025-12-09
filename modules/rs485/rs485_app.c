@@ -511,8 +511,12 @@ static void rs485_task(void *pvParameter)
 
       if (strncmp(cmd, "LTE", 3) == 0)
       {
-//        lora_instance_deinit();
-        gsm_start_rover();
+        // LoRa 모드였다면 종료
+        lora_instance_deinit();
+
+        // Airplane 모드 해제 (무선 통신 재개)
+        gsm_airplane_mode_disable();
+
         RS485_Send("+GUGUSTART-LTE", strlen("+GUGUSTART-LTE"));
         is_gugu_started = true;
       }
@@ -535,13 +539,12 @@ static void rs485_task(void *pvParameter)
     else if (strncmp(rx_buffer, "AT+GUGUSTOP", 11) == 0)
     {
       is_gugu_started = false;
+
+      // LoRa 모드 종료
       lora_instance_deinit();
-      // ntrip_stop();
-      // vTaskDelay(pdMS_TO_TICKS(100));
-      // gsm_at_power_off(1);
-      // vTaskDelay(pdMS_TO_TICKS(2000));
-      // gsm_port_power_off();
-      // lte_reset_state();
+
+      // Airplane 모드 활성화 (무선 통신 차단)
+      gsm_airplane_mode_enable();
 
       RS485_Send((uint8_t *)STOP_Response, strlen(STOP_Response));
     }

@@ -57,39 +57,41 @@ void gsm_start_rover(void) {
 
 static TaskHandle_t ntrip_task_handle = NULL;
 static bool ntrip_should_restart = false;
+static bool is_first_boot = true; // 첫 부팅 플래그
 
 static void gsm_evt_handler(gsm_evt_t evt, void *args) {
   switch (evt) {
   case GSM_EVT_RDY: {
     LOG_INFO("RDY 수신");
 
-    // LTE 초기화 시작
-    if (lte_get_init_state() == LTE_INIT_IDLE) {
-      // 첫 시작 또는 하드웨어 리셋 후
-      if (lte_get_retry_count() == 0) {
-        // 첫 시작: 카운터 초기화
-        LOG_INFO("LTE 초기화 시작");
-      } else if (lte_get_retry_count() == LTE_INIT_MAX_RETRY + 1) {
-        // 하드웨어 리셋 후: 카운터 유지
-        LOG_INFO("하드웨어 리셋 후 LTE 초기화 재시작");
-      }
-
+    // 첫 부팅 시에만 자동 초기화 (Airplane control 설정까지)
+    if (is_first_boot && lte_get_init_state() == LTE_INIT_IDLE) {
+      LOG_INFO("첫 부팅: LTE 기본 설정 초기화");
       lte_init_start();
+      is_first_boot = false;
+    }
+    // 하드웨어 리셋 후에는 재초기화
+    else if (lte_get_retry_count() == LTE_INIT_MAX_RETRY + 1) {
+      LOG_INFO("하드웨어 리셋 후 LTE 재초기화");
+      lte_init_start();
+    }
+    else {
+      LOG_INFO("RDY 수신 완료 (초기화는 GUGUSTART 명령 대기)");
     }
     break;
   }
 
   case GSM_EVT_INIT_OK: {
     LOG_INFO("LTE 초기화 성공");
-    // 여기서 추가 작업 수행 가능 (예: TCP 연결 등)
-    if (!ntrip_should_restart) {
-      ntrip_task_create(&gsm_handle);
-    } else {
-      // 재시작 플래그가 설정된 경우
+
+    // 재시작 플래그가 설정된 경우에만 자동으로 NTRIP 시작
+    if (ntrip_should_restart) {
       ntrip_should_restart = false;
       ntrip_task_create(&gsm_handle);
       led_set_color(LED_ID_1, LED_COLOR_GREEN);
       LOG_INFO("NTRIP 태스크 재생성 완료");
+    } else {
+      LOG_INFO("LTE 초기화 완료 (NTRIP 시작은 GUGUSTART 명령 대기)");
     }
     break;
   }
@@ -504,4 +506,48 @@ void gsm_socket_update_recv_time(uint8_t connect_id) {
 void gsm_at_power_off(uint8_t mode)
 {
   gsm_send_at_qpowd(&gsm_handle, mode, NULL);
+}
+
+/**
+ * @brief Airplane 모드 활성화 (무선 통신 차단)
+ *
+ * NTRIP 태스크를 중지하고 Airplane 모드를 활성화합니다.
+ * AT+QCFG="airplanecontrol",1 설정이 완료된 상태에서만 동작합니다.
+ */
+void gsm_airplane_mode_enable(void) {
+  LOG_INFO("Airplane 모드 활성화");
+
+  // NTRIP 태스크 중지 요청
+  // TODO: ntrip_task_stop() 함수 호출 필요
+
+  // Airplane 모드 활성화 (W_DISABLE 핀 HIGH)
+  gsm_port_set_airplane_mode(1);
+
+  led_set_color(LED_ID_1, LED_COLOR_OFF);
+}
+
+/**
+ * @brief Airplane 모드 비활성화 (무선 통신 재개)
+ *
+ * Airplane 모드를 해제하고 네트워크 재연결 후 NTRIP 태스크를 시작합니다.
+ * AT+QCFG="airplanecontrol",1 설정이 완료된 상태에서만 동작합니다.
+ */
+void gsm_airplane_mode_disable(void) {
+  LOG_INFO("Airplane 모드 비활성화");
+
+  // Airplane 모드 비활성화 (W_DISABLE 핀 LOW)
+  gsm_port_set_airplane_mode(0);
+
+  // 네트워크 재연결 대기 (약 1-2초)
+  vTaskDelay(pdMS_TO_TICKS(2000));
+
+  // 네트워크 상태 확인 후 NTRIP 시작
+  if (lte_get_init_state() == LTE_INIT_DONE) {
+    LOG_INFO("네트워크 재연결 완료, NTRIP 태스크 시작");
+    ntrip_task_create(&gsm_handle);
+    led_set_color(LED_ID_1, LED_COLOR_GREEN);
+  } else {
+    LOG_WARN("네트워크 미연결 상태");
+    led_set_color(LED_ID_1, LED_COLOR_YELLOW);
+  }
 }
