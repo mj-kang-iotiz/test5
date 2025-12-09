@@ -29,6 +29,7 @@ typedef enum {
   GSM_CMD_CGDCONT, ///< APN 설정
   GSM_CMD_CPIN,    ///< SIM 장착 확인
   GSM_CMD_COPS,    ///< 선택된 네트워크 OPERATOR 확인
+  GSM_CMD_QPOWD,   ///< 전원 OFF (AT+QPOWD)
 
   // TCP
   GSM_CMD_QIOPEN,  ///< 소켓 open
@@ -527,5 +528,15 @@ void gsm_send_at_qistate(gsm_t *gsm, uint8_t query_type, uint8_t connect_id,
 void gsm_send_at_qicfg_keepalive(gsm_t *gsm, uint8_t enable, uint16_t keepidle,
                                  uint16_t keepinterval, uint8_t keepcount,
                                  at_cmd_handler callback);
+
+/**
+ * @brief AT+QPOWD 전송 (전원 OFF)
+ *
+ * @param gsm GSM 핸들
+ * @param mode 종료 모드 (0: 정상 종료, 1: 긴급 종료)
+ * @param callback 완료 콜백 (NULL이면 동기식)
+ */
+void gsm_send_at_qpowd(gsm_t *gsm, uint8_t mode, at_cmd_handler callback);
+
 
 #endif

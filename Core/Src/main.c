@@ -96,7 +96,7 @@ void initThread(void *pvParameter) {
   user_params_t* params = flash_params_get_current();
 
 	flash_params_init();
-  // flash_params_set_manual_position(true, "37.413421", "127.125791", "60");
+//   flash_params_set_manual_position(true, "37.413421", "127.125791", "60");
 
 	//	flash_params_set_ntrip_url("www.gnssdata.or.kr");
 //	flash_params_set_ntrip_port("2101");
@@ -151,7 +151,8 @@ int main(void) {
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick.
    */
-    HAL_Init();
+
+	HAL_Init();
 
   /* USER CODE BEGIN Init */
 

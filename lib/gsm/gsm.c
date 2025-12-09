@@ -440,6 +440,7 @@ const gsm_at_cmd_entry_t gsm_at_cmd_handlers[] = {
     {GSM_CMD_CGDCONT, "AT+CGDCONT", "+CGDCONT: ", 300},
     {GSM_CMD_CPIN, "AT+CPIN", "+CPIN: ", 5000},
     {GSM_CMD_COPS, "AT+COPS", "+COPS: ", 180000},
+    {GSM_CMD_QPOWD, "AT+QPOWD", NULL, 40000},
 
     /* EC25 TCP 명령어 */
     {GSM_CMD_QIOPEN, "AT+QIOPEN", "+QIOPEN: ", 150000},
@@ -1491,4 +1492,10 @@ void gsm_send_at_qicfg_keepalive(gsm_t *gsm, uint8_t enable, uint16_t keepidle,
   snprintf(params, sizeof(params), "\"tcp/keepalive\",%d,%d,%d,%d", enable,
            keepidle, keepinterval, keepcount);
   gsm_send_at_cmd(gsm, GSM_CMD_QICFG, GSM_AT_WRITE, params, callback);
+}
+
+void gsm_send_at_qpowd(gsm_t *gsm, uint8_t mode, at_cmd_handler callback) {
+  char params[4] = {0};
+  snprintf(params, sizeof(params), "%d", mode);
+  gsm_send_at_cmd(gsm, GSM_CMD_QPOWD, GSM_AT_WRITE, params, callback);
 }

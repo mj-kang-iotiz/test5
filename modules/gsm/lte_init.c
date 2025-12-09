@@ -392,10 +392,23 @@ void lte_reset_state(void) {
 
   LOG_INFO("LTE 상태 리셋");
 
+  if (lte_network_check_timer != NULL) {
+    xTimerStop(lte_network_check_timer, 0);
+    LOG_INFO("네트워크 체크 타이머 중지");
+  }
+
+  if (gsm_handle_ptr && gsm_handle_ptr->at_cmd_queue) {
+    gsm_at_cmd_t dummy_cmd;
+    while (xQueueReceive(gsm_handle_ptr->at_cmd_queue, &dummy_cmd, 0) == pdTRUE) {
+      LOG_DEBUG("AT 명령 큐 비우기");
+    }
+  }
+
+  if (gsm_handle_ptr && gsm_handle_ptr->producer_sem) {
+    xSemaphoreGive(gsm_handle_ptr->producer_sem);
+  }
+
   lte_init_state = LTE_INIT_IDLE;
-
   lte_init_retry_count = 0;
-
   lte_network_check_count = 0;
-
 }

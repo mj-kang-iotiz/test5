@@ -212,6 +212,8 @@ static const char *um982_base_cmds[] = {
   "unmask GPS\r\n",
   "unmask GLO\r\n",
   "unmask GAL\r\n",
+  "unmask QZSS\r\n",
+
   "rtcm1033 com1 10\r\n",
   "rtcm1006 com1 10\r\n",
   "rtcm1074 com1 1\r\n", // gps msm4
@@ -221,6 +223,9 @@ static const char *um982_base_cmds[] = {
   "gpgga com1 1\r\n",
   // "gpgsv com1 1\r\n",
   "BESTNAVB 1\r\n",
+  "CONFIG RTK MMPL\r\n",
+  "CONFIG PVTALG MULTI\r\n",
+  "CONFIG RTK RELIABILITY 4 2\r\n",
   // "MODE BASE TIME 120 0.1\r\n",
   // "mode base 37.4136149088 127.125455729 62.0923\r\n", // lat=40.07898324818,lon=116.23660197714,height=60.4265
 };
@@ -231,12 +236,19 @@ static const char *um982_rover_cmds[] = {
   "unmask GPS\r\n",
   "unmask GLO\r\n",
   "unmask GAL\r\n",
+  "unmask QZSS\r\n",
   "gpgga com1 1\r\n",
   // "gpgsv com1 1\r\n",
   "gpths com1 1\r\n",
   // "OBSVHA COM1 1\r\n", // slave antenna
   "BESTNAVB 1\r\n",
   "CONFIG HEADING FIXLENGTH\r\n"
+  "CONFIG PVTALG MULTI\r\n",
+  "CONFIG SMOOTH RTKHEIGHT 20\r\n",
+  "MASK 10\r\n",
+  "CONFIG RTK MMPL 1\r\n",
+  "CONFIG RTK CN0THD 1\r\n",
+  "CONFIG RTK RELIABILITY 4 2\r\n",
   // "config heading length 100 40\r\n",
 };
 

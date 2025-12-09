@@ -137,10 +137,10 @@ void gsm_port_gpio_start(void) {
                     GPIO_PIN_RESET); // reset
   HAL_GPIO_WritePin(GSM_PORT_GPIO_PORT, GSM_PORT_GPIO_PWR_PIN,
                     GPIO_PIN_RESET); // pwr
-  HAL_Delay(200);                    // not less than 30ms
+  vTaskDelay(pdMS_TO_TICKS(10));
   HAL_GPIO_WritePin(GSM_PORT_GPIO_PORT, GSM_PORT_GPIO_PWR_PIN,
                     GPIO_PIN_SET); // pwr
-  HAL_Delay(1000);                 // >= 500ms delay
+  vTaskDelay(pdMS_TO_TICKS(200));
   HAL_GPIO_WritePin(GSM_PORT_GPIO_PORT, GSM_PORT_GPIO_PWR_PIN,
                     GPIO_PIN_RESET); // pwr
 
@@ -153,36 +153,12 @@ void gsm_port_gpio_start(void) {
 
 int gsm_port_power_on(void) {
 
-  // PWRKEY 핀 LOW: 초기 상태
-
-  HAL_GPIO_WritePin(GSM_PORT_GPIO_PORT, GSM_PORT_GPIO_PWR_PIN, GPIO_PIN_RESET);
-
-  vTaskDelay(pdMS_TO_TICKS(200)); // 200ms 대기 (안정화)
-
- 
-
-  // PWRKEY 핀 HIGH: 전원 ON 시작
-
-  HAL_GPIO_WritePin(GSM_PORT_GPIO_PORT, GSM_PORT_GPIO_PWR_PIN, GPIO_PIN_SET);
-
-  vTaskDelay(pdMS_TO_TICKS(1000)); // 1000ms 유지 (최소 500ms)
-
- 
-
-  // PWRKEY 핀 LOW: 정상 동작 모드로 전환
-
-  HAL_GPIO_WritePin(GSM_PORT_GPIO_PORT, GSM_PORT_GPIO_PWR_PIN, GPIO_PIN_RESET);
-
- 
-
-  // 부팅 초기 대기 (3초)
-
-  // 참고: RDY URC는 약 13초 후 자동 수신됨
-
-  vTaskDelay(pdMS_TO_TICKS(3000));
-
- 
-
+  // HAL_GPIO_WritePin(GSM_PORT_GPIO_PORT, GSM_PORT_GPIO_PWR_PIN, GPIO_PIN_RESET);
+  // vTaskDelay(pdMS_TO_TICKS(10));
+  // HAL_GPIO_WritePin(GSM_PORT_GPIO_PORT, GSM_PORT_GPIO_PWR_PIN, GPIO_PIN_SET);
+  // vTaskDelay(pdMS_TO_TICKS(200));
+  // HAL_GPIO_WritePin(GSM_PORT_GPIO_PORT, GSM_PORT_GPIO_PWR_PIN, GPIO_PIN_RESET);
+  gsm_port_gpio_start();
   return 0;
 
 }
@@ -287,25 +263,11 @@ void DMA2_Stream2_IRQHandler(void) {
 }
 
 void gsm_port_power_off(void) {
-
-  // PWRKEY 핀 HIGH: power off 시작
-
+// gsm_port_gpio_start();
   HAL_GPIO_WritePin(GSM_PORT_GPIO_PORT, GSM_PORT_GPIO_PWR_PIN, GPIO_PIN_SET);
 
-  vTaskDelay(pdMS_TO_TICKS(700)); // 700ms 유지 (최소 650ms)
-
- 
-
-  // PWRKEY 핀 LOW: 정상 상태로 복귀
+  vTaskDelay(pdMS_TO_TICKS(500));
 
   HAL_GPIO_WritePin(GSM_PORT_GPIO_PORT, GSM_PORT_GPIO_PWR_PIN, GPIO_PIN_RESET);
-
- 
-
-  // Power down 완료 대기 (1초)
-
-  // 참고: "POWERED DOWN" URC는 자동 수신됨
-
-  vTaskDelay(pdMS_TO_TICKS(1000));
-
+   vTaskDelay(pdMS_TO_TICKS(2000));
 }

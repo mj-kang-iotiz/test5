@@ -12,6 +12,7 @@
 #include "gps_app.h"
 #include "lora_app.h"
 #include "gsm_app.h"
+#include "gsm.h"
 
 #ifndef TAG
 #define TAG "RS485_APP"
@@ -510,17 +511,18 @@ static void rs485_task(void *pvParameter)
 
       if (strncmp(cmd, "LTE", 3) == 0)
       {
-        lora_instance_deinit();
+//        lora_instance_deinit();
         gsm_start_rover();
         RS485_Send("+GUGUSTART-LTE", strlen("+GUGUSTART-LTE"));
         is_gugu_started = true;
       }
       else if (strncmp(cmd, "LORA", 4) == 0)
       {
-        ntrip_stop();
-        vTaskDelay(pdMS_TO_TICKS(100));
-        gsm_port_power_off();
-        lte_reset_state();
+//        ntrip_stop();
+//        vTaskDelay(pdMS_TO_TICKS(100));
+//        gsm_at_power_off(1);
+//        lte_reset_state();
+//        vTaskDelay(pdMS_TO_TICKS(2000));
         lora_start_rover();
         RS485_Send("+GUGUSTART-LORA", strlen("+GUGUSTART-LORA"));
         is_gugu_started = true;
@@ -534,10 +536,12 @@ static void rs485_task(void *pvParameter)
     {
       is_gugu_started = false;
       lora_instance_deinit();
-      ntrip_stop();
-      vTaskDelay(pdMS_TO_TICKS(100));
-      gsm_port_power_off();
-      lte_reset_state();
+      // ntrip_stop();
+      // vTaskDelay(pdMS_TO_TICKS(100));
+      // gsm_at_power_off(1);
+      // vTaskDelay(pdMS_TO_TICKS(2000));
+      // gsm_port_power_off();
+      // lte_reset_state();
 
       RS485_Send((uint8_t *)STOP_Response, strlen(STOP_Response));
     }

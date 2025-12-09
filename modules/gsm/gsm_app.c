@@ -126,6 +126,11 @@ static void gsm_evt_handler(gsm_evt_t evt, void *args) {
     lte_reinit_from_apn();
     break;
 
+  case GSM_EVT_POWERED_DOWN:
+    // lte_reset_state();
+	  LOG_INFO("GSM POWERED DOWN");
+	 break;
+
   default:
     break;
   }
@@ -496,3 +501,7 @@ void gsm_socket_update_recv_time(uint8_t connect_id) {
 }
 
 
+void gsm_at_power_off(uint8_t mode)
+{
+  gsm_send_at_qpowd(&gsm_handle, mode, NULL);
+}
