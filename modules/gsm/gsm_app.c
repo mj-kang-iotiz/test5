@@ -46,13 +46,20 @@ void gsm_start_rover(void) {
   if(!gsm_task_created)
   {
     gsm_task_create(NULL);
+    LOG_INFO("LTE 전원 ON 완료, RDY 대기 중...");
   }
   else
   {
+    // 이미 생성된 태스크 - Airplane 모드 해제
+    LOG_INFO("Airplane 모드 해제, 네트워크 재등록 시작");
     gsm_port_set_airplane_mode(false);
-  }
 
-  LOG_INFO("LTE 전원 ON 완료, RDY 대기 중...");
+    // NTRIP 재시작 플래그 설정 (네트워크 등록 완료 시 GSM_EVT_INIT_OK에서 시작)
+    ntrip_should_restart = true;
+
+    // 네트워크 재등록 확인 (APN부터 재설정)
+    lte_reinit_from_apn();
+  }
 }
 
 static TaskHandle_t ntrip_task_handle = NULL;
@@ -114,6 +121,12 @@ static void gsm_evt_handler(gsm_evt_t evt, void *args) {
   case GSM_EVT_PDP_DEACT:
     uint8_t context_id = args ? *(uint8_t *)args : 0;
     LOG_ERR("PDP context 비활성화 (context_id=%d)", context_id);
+
+    // Airplane 모드 활성화 중이면 재연결하지 않음
+    if (gsm_port_get_airplane_mode()) {
+      LOG_INFO("Airplane 모드 활성화 중 - 재연결 로직 실행 안 함");
+      break;
+    }
 
     // LED 노란색 (네트워크 문제)
     led_set_color(LED_ID_1, LED_COLOR_YELLOW);

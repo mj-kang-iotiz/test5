@@ -279,3 +279,8 @@ void gsm_port_set_airplane_mode(uint8_t enable) {
     HAL_GPIO_WritePin(GSM_PORT_GPIO_PORT, GSM_PORT_GPIO_AIRPLANE_PIN, GPIO_PIN_RESET);
   }
 }
+
+bool gsm_port_get_airplane_mode(void) {
+  // W_DISABLE 핀이 HIGH이면 airplane 모드 활성화
+  return HAL_GPIO_ReadPin(GSM_PORT_GPIO_PORT, GSM_PORT_GPIO_AIRPLANE_PIN) == GPIO_PIN_SET;
+}

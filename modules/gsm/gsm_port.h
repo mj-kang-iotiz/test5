@@ -25,4 +25,12 @@ int gsm_port_power_on(void);
 int gsm_port_reset(void);
 void gsm_port_set_airplane_mode(uint8_t enable);
 
+/**
+ * @brief Airplane 모드 상태 확인
+ *
+ * @return bool true: Airplane 모드 활성화 (W_DISABLE 핀 HIGH)
+ *              false: Airplane 모드 비활성화 (W_DISABLE 핀 LOW)
+ */
+bool gsm_port_get_airplane_mode(void);
+
 #endif
