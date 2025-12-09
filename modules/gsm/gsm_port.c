@@ -138,11 +138,13 @@ void gsm_port_gpio_start(void) {
   HAL_GPIO_WritePin(GSM_PORT_GPIO_PORT, GSM_PORT_GPIO_PWR_PIN,
                     GPIO_PIN_RESET); // pwr
   vTaskDelay(pdMS_TO_TICKS(10));
+
+  // EC25 PWRKEY: 최소 500ms 이상 HIGH 유지 필요 (권장 1000ms)
   HAL_GPIO_WritePin(GSM_PORT_GPIO_PORT, GSM_PORT_GPIO_PWR_PIN,
-                    GPIO_PIN_SET); // pwr
-  vTaskDelay(pdMS_TO_TICKS(200));
+                    GPIO_PIN_SET); // pwr HIGH
+  vTaskDelay(pdMS_TO_TICKS(1000)); // 1000ms 유지 (안정적인 전원 ON)
   HAL_GPIO_WritePin(GSM_PORT_GPIO_PORT, GSM_PORT_GPIO_PWR_PIN,
-                    GPIO_PIN_RESET); // pwr
+                    GPIO_PIN_RESET); // pwr LOW
 
   /* wake up mode & airplane mode setting */
   HAL_GPIO_WritePin(GSM_PORT_GPIO_PORT, GSM_PORT_GPIO_AIRPLANE_PIN,
@@ -263,11 +265,11 @@ void DMA2_Stream2_IRQHandler(void) {
 }
 
 void gsm_port_power_off(void) {
-// gsm_port_gpio_start();
+  // EC25 PWRKEY: 최소 650ms 이상 HIGH 유지 필요 (권장 1000ms)
   HAL_GPIO_WritePin(GSM_PORT_GPIO_PORT, GSM_PORT_GPIO_PWR_PIN, GPIO_PIN_SET);
-
-  vTaskDelay(pdMS_TO_TICKS(500));
-
+  vTaskDelay(pdMS_TO_TICKS(1000)); // 1000ms 유지 (안정적인 전원 OFF)
   HAL_GPIO_WritePin(GSM_PORT_GPIO_PORT, GSM_PORT_GPIO_PWR_PIN, GPIO_PIN_RESET);
-   vTaskDelay(pdMS_TO_TICKS(2000));
+
+  // POWERED DOWN URC 대기
+  vTaskDelay(pdMS_TO_TICKS(2000));
 }
