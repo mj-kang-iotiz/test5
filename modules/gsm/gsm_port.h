@@ -24,4 +24,14 @@ int gsm_port_power_on(void);
  */
 int gsm_port_reset(void);
 
+/**
+ * @brief Airplane 모드 GPIO 제어
+ *
+ * W_DISABLE 핀을 통해 Airplane 모드를 제어합니다.
+ * EC25 모듈의 AT+QCFG="airplanecontrol",1 설정 후 사용 가능
+ *
+ * @param enable 1: Airplane 모드 활성화 (무선 통신 차단), 0: Airplane 모드 비활성화
+ */
+void gsm_port_set_airplane_mode(uint8_t enable);
+
 #endif

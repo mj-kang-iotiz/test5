@@ -25,6 +25,8 @@ static void lte_cmee_set_callback(gsm_t *gsm, gsm_cmd_t cmd, void *msg,
                                   bool is_ok);
 static void lte_qisde_off_callback(gsm_t *gsm, gsm_cmd_t cmd, void *msg,
                                    bool is_ok);
+static void lte_airplane_ctrl_set_callback(gsm_t *gsm, gsm_cmd_t cmd, void *msg,
+                                           bool is_ok);
 static void lte_cpin_check_callback(gsm_t *gsm, gsm_cmd_t cmd, void *msg,
                                     bool is_ok);
 static void lte_apn_set_callback(gsm_t *gsm, gsm_cmd_t cmd, void *msg,
@@ -194,7 +196,23 @@ static void lte_qisde_off_callback(gsm_t *gsm, gsm_cmd_t cmd, void *msg,
   }
 
   LOG_INFO("AT+QISDE=0 OK");
-  lte_init_state = LTE_INIT_CPIN_CHECK;
+  lte_init_state = LTE_INIT_AIRPLANE_CTRL_SET;
+
+  gsm_send_at_qcfg_airplanecontrol(gsm, 1, lte_airplane_ctrl_set_callback);
+}
+
+/**
+ * @brief AT+QCFG="airplanecontrol" 설정 완료 콜백
+ */
+static void lte_airplane_ctrl_set_callback(gsm_t *gsm, gsm_cmd_t cmd, void *msg,
+                                           bool is_ok) {
+  if (!is_ok) {
+    lte_init_fail_with_retry("AT+QCFG=\"airplanecontrol\" 설정 실패");
+    return;
+  }
+
+  LOG_INFO("Airplane mode GPIO control OK");
+  lte_init_state = LTE_INIT_KEEPALIVE_SET;
 
   gsm_send_at_qicfg_keepalive(gsm, 1, 2, 30, 3, lte_keepalive_set_callback);
 }

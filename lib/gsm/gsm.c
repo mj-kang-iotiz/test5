@@ -338,6 +338,19 @@ void handle_urc_qistate(gsm_t *gsm, const char *data, size_t len) {
 }
 
 /**
+ * @brief +QCFG URC 핸들러
+ * 형식: +QCFG: "airplanecontrol",<mode>
+ * 예: +QCFG: "airplanecontrol",1
+ */
+void handle_urc_qcfg(gsm_t *gsm, const char *data, size_t len) {
+  // QCFG 응답은 READ 모드에서만 처리
+  if (gsm->current_cmd && gsm->current_cmd->cmd == GSM_CMD_QCFG) {
+    // 현재는 airplanecontrol만 지원하므로 별도 파싱 불필요
+    // 필요시 파싱 로직 추가
+  }
+}
+
+/**
  * @brief +QIURC URC 핸들러
  * 형식:
  * - +QIURC: "recv",<connectID>  (데이터 수신 알림)
@@ -428,7 +441,9 @@ const urc_handler_entry_t urc_info_handlers[] = {
     {"+QISEND: ", handle_urc_qisend},   ///< 2.3.9
     {"+QIRD: ", handle_urc_qird},       ///< 2.3.10
     {"+QISTATE: ", handle_urc_qistate}, ///< 2.3.8
-    {"+QIURC: ", handle_urc_qiurc},     {NULL, NULL}};
+    {"+QIURC: ", handle_urc_qiurc},
+    {"+QCFG: ", handle_urc_qcfg},       ///< AT+QCFG 응답
+    {NULL, NULL}};
 
 const gsm_at_cmd_entry_t gsm_at_cmd_handlers[] = {
     {GSM_CMD_NONE, NULL, NULL, 0},
@@ -451,6 +466,7 @@ const gsm_at_cmd_entry_t gsm_at_cmd_handlers[] = {
     {GSM_CMD_QISTATE, "AT+QISTATE", "+QISTATE: ", 300},
 
     {GSM_CMD_QICFG, "AT+QICFG", "+QICFG: ", 300},
+    {GSM_CMD_QCFG, "AT+QCFG", "+QCFG: ", 300},
 
     {GSM_CMD_NONE, NULL, NULL, 0}};
 
@@ -1498,4 +1514,21 @@ void gsm_send_at_qpowd(gsm_t *gsm, uint8_t mode, at_cmd_handler callback) {
   char params[4] = {0};
   snprintf(params, sizeof(params), "%d", mode);
   gsm_send_at_cmd(gsm, GSM_CMD_QPOWD, GSM_AT_WRITE, params, callback);
+}
+
+/**
+ * @brief AT+QCFG="airplanecontrol" 전송 (Airplane 모드 GPIO 제어 설정)
+ *
+ * EC25 모듈의 W_DISABLE 핀을 통해 Airplane 모드를 GPIO로 제어하도록 설정합니다.
+ * mode=1로 설정 후, gsm_port_set_airplane_mode() 함수를 사용하여 GPIO로 제어 가능합니다.
+ *
+ * @param gsm GSM 핸들
+ * @param mode 0: GPIO로 제어 비활성화, 1: GPIO로 제어 활성화
+ * @param callback 완료 콜백 (NULL이면 동기식)
+ */
+void gsm_send_at_qcfg_airplanecontrol(gsm_t *gsm, uint8_t mode, at_cmd_handler callback) {
+  char params[32] = {0};
+  // AT+QCFG="airplanecontrol",<mode>
+  snprintf(params, sizeof(params), "\"airplanecontrol\",%d", mode);
+  gsm_send_at_cmd(gsm, GSM_CMD_QCFG, GSM_AT_WRITE, params, callback);
 }

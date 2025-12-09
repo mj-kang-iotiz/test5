@@ -41,6 +41,7 @@ typedef enum {
 
   // 설정
   GSM_CMD_QICFG,
+  GSM_CMD_QCFG,  ///< AT+QCFG 설정
   GSM_CMD_MAX
 } gsm_cmd_t;
 
@@ -537,6 +538,15 @@ void gsm_send_at_qicfg_keepalive(gsm_t *gsm, uint8_t enable, uint16_t keepidle,
  * @param callback 완료 콜백 (NULL이면 동기식)
  */
 void gsm_send_at_qpowd(gsm_t *gsm, uint8_t mode, at_cmd_handler callback);
+
+/**
+ * @brief AT+QCFG="airplanecontrol" 전송 (Airplane 모드 GPIO 제어 설정)
+ *
+ * @param gsm GSM 핸들
+ * @param mode 0: GPIO로 제어 비활성화, 1: GPIO로 제어 활성화
+ * @param callback 완료 콜백 (NULL이면 동기식)
+ */
+void gsm_send_at_qcfg_airplanecontrol(gsm_t *gsm, uint8_t mode, at_cmd_handler callback);
 
 
 #endif
