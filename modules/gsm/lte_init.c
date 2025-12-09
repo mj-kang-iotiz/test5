@@ -398,4 +398,10 @@ void lte_reset_state(void) {
 
   lte_network_check_count = 0;
 
+  // 네트워크 체크 타이머 중지 (실행 중이던 타이머로 인한 오동작 방지)
+  if (lte_network_check_timer != NULL) {
+    xTimerStop(lte_network_check_timer, 0);
+    LOG_INFO("네트워크 체크 타이머 중지");
+  }
+
 }
