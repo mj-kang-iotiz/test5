@@ -167,6 +167,7 @@ void handle_urc_qiopen(gsm_t *gsm, const char *data, size_t len) {
       if (target->qiopen.result == 0) {
         // 연결 성공
         socket->state = GSM_TCP_STATE_CONNECTED;
+        LOG_INFO("TCP 연결 성공 (connectID=%d)", cid);
 
         if (is_urc && gsm->evt_handler.handler) {
           gsm->evt_handler.handler(GSM_EVT_TCP_CONNECTED, &cid);
@@ -174,6 +175,23 @@ void handle_urc_qiopen(gsm_t *gsm, const char *data, size_t len) {
       } else {
         // 연결 실패
         socket->state = GSM_TCP_STATE_CLOSED;
+
+        // 에러 코드별 상세 메시지
+        const char *err_msg = "알 수 없는 오류";
+        switch (target->qiopen.result) {
+          case 561: err_msg = "Network timeout"; break;
+          case 562: err_msg = "Network no route to host"; break;
+          case 563: err_msg = "Network unreachable"; break;
+          case 564: err_msg = "Connection timed out"; break;
+          case 565: err_msg = "DNS resolution failed / Unknown host"; break;
+          case 566: err_msg = "Connection refused"; break;
+          case 567: err_msg = "Network is down"; break;
+          case 568: err_msg = "Network is unreachable"; break;
+          case 569: err_msg = "Connection reset by peer"; break;
+          case 570: err_msg = "SSL handshake failed"; break;
+        }
+        LOG_ERR("TCP 연결 실패 (connectID=%d, err=%d): %s",
+                cid, target->qiopen.result, err_msg);
       }
 
       if (socket->open_sem) {

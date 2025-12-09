@@ -188,15 +188,13 @@ static int ntrip_connect_to_server(tcp_socket_t *sock)
 
                       ntrip_port, 10000);
 
-    if (ret == 0 && tcp_get_socket_state(sock, NTRIP_CONNECT_ID) ==
+    gsm_tcp_state_t state = tcp_get_socket_state(sock, NTRIP_CONNECT_ID);
 
-                        GSM_TCP_STATE_CONNECTED)
+    if (ret == 0 && state == GSM_TCP_STATE_CONNECTED)
     {
-
-      LOG_DEBUG("TCP 연결 성공");
+      LOG_INFO("TCP 연결 성공");
 
       ret = tcp_send(sock, (const uint8_t *)g_ntrip_http_request,
-
                      strlen(g_ntrip_http_request));
 
       if (ret < 0)
@@ -215,12 +213,20 @@ static int ntrip_connect_to_server(tcp_socket_t *sock)
       ret = tcp_recv(sock, recv_buf, sizeof(recv_buf), 0);
       if (ret > 0)
       {
+        LOG_INFO("NTRIP 서버 응답 수신 완료 (%d bytes)", ret);
         led_set_color(LED_ID_1, LED_COLOR_YELLOW);
         return 0; // 연결 성공
       }
+      else
+      {
+        LOG_ERR("NTRIP 서버 응답 수신 실패 (ret=%d)", ret);
+      }
+    }
+    else
+    {
+      LOG_WARN("TCP 연결 실패 (ret=%d, state=%d)", ret, state);
     }
 
-    LOG_WARN("TCP 연결 실패 (ret=%d), 강제 닫기 후 재시도...", ret);
     led_set_color(LED_ID_1, LED_COLOR_YELLOW);
     tcp_close_force(sock);
 
