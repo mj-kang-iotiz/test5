@@ -82,4 +82,11 @@ void lte_reinit_from_apn(void);
 
 void lte_reset_state(void);
 
+/**
+ * @brief LTE 타이머 중지
+ *
+ * 전원 OFF 전에 호출하여 타이머 콜백이 실행되는 것을 방지
+ */
+void lte_stop_timer(void);
+
 #endif // LTE_INIT_H

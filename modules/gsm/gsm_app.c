@@ -101,6 +101,12 @@ static void gsm_evt_handler(gsm_evt_t evt, void *args) {
     break;
   }
 
+  case GSM_EVT_POWERED_DOWN: {
+    LOG_INFO("GSM POWERED DOWN");
+    lte_reset_state();
+    break;
+  }
+
   case GSM_EVT_TCP_CLOSED:
     uint8_t connect_id = args ? *(uint8_t *)args : 0;
     LOG_WARN("TCP 연결 종료 (connect_id=%d)", connect_id);
