@@ -392,18 +392,15 @@ void lte_reset_state(void) {
 
   LOG_INFO("LTE 상태 리셋");
 
+  // 네트워크 체크 타이머 중지
+  if (lte_network_check_timer != NULL) {
+    xTimerStop(lte_network_check_timer, 0);
+  }
+
   lte_init_state = LTE_INIT_IDLE;
 
   lte_init_retry_count = 0;
 
   lte_network_check_count = 0;
 
-}
-
-void lte_stop_timer(void) {
-  // 네트워크 체크 타이머 중지 (전원 OFF 전에 호출)
-  if (lte_network_check_timer != NULL) {
-    xTimerStop(lte_network_check_timer, 0);
-    LOG_INFO("LTE 네트워크 체크 타이머 중지");
-  }
 }
