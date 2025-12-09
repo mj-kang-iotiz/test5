@@ -397,6 +397,19 @@ void lte_reset_state(void) {
     xTimerStop(lte_network_check_timer, 0);
   }
 
+  // AT 명령 큐 비우기 (블로킹 방지)
+  if (gsm_handle_ptr && gsm_handle_ptr->at_cmd_queue) {
+    gsm_at_cmd_t dummy_cmd;
+    while (xQueueReceive(gsm_handle_ptr->at_cmd_queue, &dummy_cmd, 0) == pdTRUE) {
+      LOG_DEBUG("AT 명령 큐 비우기");
+    }
+  }
+
+  // 현재 실행 중인 AT 명령 취소 (타임아웃 대기 중단)
+  if (gsm_handle_ptr && gsm_handle_ptr->producer_sem) {
+    xSemaphoreGive(gsm_handle_ptr->producer_sem);
+  }
+
   lte_init_state = LTE_INIT_IDLE;
 
   lte_init_retry_count = 0;
