@@ -517,10 +517,10 @@ static void rs485_task(void *pvParameter)
       }
       else if (strncmp(cmd, "LORA", 4) == 0)
       {
+        lte_reset_state();  // 먼저 LTE 상태 리셋 및 타이머 중지
         ntrip_stop();
         vTaskDelay(pdMS_TO_TICKS(100));
-        gsm_port_power_off();
-        lte_reset_state();
+        gsm_port_power_off();  // 그 다음 전원 OFF
         lora_start_rover();
         RS485_Send("+GUGUSTART-LORA", strlen("+GUGUSTART-LORA"));
         is_gugu_started = true;
@@ -533,11 +533,11 @@ static void rs485_task(void *pvParameter)
     else if (strncmp(rx_buffer, "AT+GUGUSTOP", 11) == 0)
     {
       is_gugu_started = false;
+      lte_reset_state();  // 먼저 LTE 상태 리셋 및 타이머 중지
       lora_instance_deinit();
       ntrip_stop();
       vTaskDelay(pdMS_TO_TICKS(100));
-      gsm_port_power_off();
-      lte_reset_state();
+      gsm_port_power_off();  // 그 다음 전원 OFF
 
       RS485_Send((uint8_t *)STOP_Response, strlen(STOP_Response));
     }
