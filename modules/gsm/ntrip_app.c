@@ -20,8 +20,10 @@
 #define NTRIP_CONTEXT_ID 1 // PDP context ID
 
 #define NTRIP_MAX_CONNECT_RETRY 3
-#define NTRIP_MAX_TIMEOUT_COUNT 3    // 연속 타임아웃 최대 허용 횟수
-#define NTRIP_RECONNECT_DELAY_MS 500 // 재연결 대기 시간 (ms)
+#define NTRIP_MAX_TIMEOUT_COUNT 3        // 연속 타임아웃 최대 허용 횟수
+#define NTRIP_RECONNECT_DELAY_MS 500     // 재연결 대기 시간 (ms)
+#define NTRIP_INIT_MAX_RETRY 5           // 초기화 최대 재시도 횟수
+#define NTRIP_INIT_RETRY_BASE_DELAY_MS 1000 // 초기화 재시도 기본 대기 시간 (백오프)
 
 #define NTRIP_GGA_QUEUE_SIZE 10 // GGA 전송 큐 크기 (재연결 중 버퍼링)
 #define NTRIP_GGA_MAX_LEN 100   // GGA 문장 최대 길이
@@ -293,40 +295,124 @@ static void ntrip_tcp_recv_task(void *pvParameter)
   LOG_INFO("NTRIP 태스크 시작");
   led_set_color(LED_ID_1, LED_COLOR_RED);
 
+  // ========================================
+  // 1단계: GGA 전송 큐 생성 (재시도)
+  // ========================================
   if (!g_gga_send_queue)
   {
-    g_gga_send_queue = xQueueCreate(NTRIP_GGA_QUEUE_SIZE, sizeof(ntrip_gga_queue_item_t));
+    int queue_retry = 0;
+    while (queue_retry < NTRIP_INIT_MAX_RETRY)
+    {
+      g_gga_send_queue = xQueueCreate(NTRIP_GGA_QUEUE_SIZE, sizeof(ntrip_gga_queue_item_t));
+      if (g_gga_send_queue)
+      {
+        LOG_INFO("GGA 전송 큐 생성 완료");
+        break;
+      }
+
+      queue_retry++;
+      LOG_ERR("GGA 전송 큐 생성 실패, 재시도 중... (%d/%d)", queue_retry, NTRIP_INIT_MAX_RETRY);
+      vTaskDelay(pdMS_TO_TICKS(NTRIP_INIT_RETRY_BASE_DELAY_MS * queue_retry));
+    }
+
     if (!g_gga_send_queue)
     {
-      LOG_ERR("GGA 전송 큐 생성 실패");
+      LOG_ERR("GGA 전송 큐 생성 최종 실패 - 태스크 종료");
       vTaskDelete(NULL);
       return;
     }
   }
 
-  sock = tcp_socket_create(gsm, NTRIP_CONNECT_ID);
-  if (!sock)
+  // ========================================
+  // 2단계: 초기 연결 (소켓 생성 + 서버 연결 + HTTP 헤더 전송) - 재시도
+  // ========================================
+  int init_retry = 0;
+  bool init_success = false;
+
+  while (init_retry < NTRIP_INIT_MAX_RETRY && !init_success)
   {
-    LOG_ERR("TCP 소켓 생성 실패");
+    LOG_INFO("초기 연결 시도 (%d/%d)", init_retry + 1, NTRIP_INIT_MAX_RETRY);
+
+    // 2-1. TCP 소켓 생성
+    sock = tcp_socket_create(gsm, NTRIP_CONNECT_ID);
+    if (!sock)
+    {
+      init_retry++;
+      LOG_ERR("TCP 소켓 생성 실패, 재시도 대기... (%d/%d)", init_retry, NTRIP_INIT_MAX_RETRY);
+      vTaskDelay(pdMS_TO_TICKS(NTRIP_INIT_RETRY_BASE_DELAY_MS * init_retry));
+      continue;
+    }
+    LOG_INFO("TCP 소켓 생성 완료");
+    g_ntrip_socket = sock;
+
+    // 2-2. 서버 연결
+    if (ntrip_connect_to_server(sock) != 0)
+    {
+      init_retry++;
+      LOG_ERR("서버 연결 실패, 재시도 대기... (%d/%d)", init_retry, NTRIP_INIT_MAX_RETRY);
+      tcp_socket_destroy(sock);
+      sock = NULL;
+      g_ntrip_socket = NULL;
+      vTaskDelay(pdMS_TO_TICKS(NTRIP_INIT_RETRY_BASE_DELAY_MS * init_retry));
+      continue;
+    }
+    LOG_INFO("서버 연결 완료");
+
+    // 2-3. HTTP 헤더 전송
+    ret = tcp_send(sock, (const uint8_t *)g_ntrip_http_request,
+                   strlen(g_ntrip_http_request));
+    if (ret < 0)
+    {
+      init_retry++;
+      LOG_ERR("HTTP 헤더 전송 실패: %d, 재시도 대기... (%d/%d)", ret, init_retry, NTRIP_INIT_MAX_RETRY);
+      tcp_close(sock);
+      tcp_socket_destroy(sock);
+      sock = NULL;
+      g_ntrip_socket = NULL;
+      vTaskDelay(pdMS_TO_TICKS(NTRIP_INIT_RETRY_BASE_DELAY_MS * init_retry));
+      continue;
+    }
+    LOG_INFO("HTTP 헤더 전송 완료");
+
+    // 2-4. 초기 응답 수신 (ICY 200 OK)
+    ret = tcp_recv(sock, recv_buf, sizeof(recv_buf), 0);
+    if (ret < 0)
+    {
+      init_retry++;
+      LOG_ERR("초기 응답 수신 실패: %d, 재시도 대기... (%d/%d)", ret, init_retry, NTRIP_INIT_MAX_RETRY);
+      tcp_close(sock);
+      tcp_socket_destroy(sock);
+      sock = NULL;
+      g_ntrip_socket = NULL;
+      vTaskDelay(pdMS_TO_TICKS(NTRIP_INIT_RETRY_BASE_DELAY_MS * init_retry));
+      continue;
+    }
+    LOG_INFO("초기 응답 수신 완료 (%d bytes)", ret);
+
+    // 모든 초기화 단계 성공
+    init_success = true;
+  }
+
+  // 초기화 최종 실패 확인
+  if (!init_success)
+  {
+    LOG_ERR("초기 연결 최종 실패 - 태스크 종료");
+    if (sock)
+    {
+      tcp_socket_destroy(sock);
+      g_ntrip_socket = NULL;
+    }
     vTaskDelete(NULL);
     return;
   }
-  LOG_INFO("TCP 소켓 생성 완료");
 
-  g_ntrip_socket = sock;
-
-  if (ntrip_connect_to_server(sock) != 0)
-  {
-    LOG_ERR("초기 연결 실패");
-    g_ntrip_connected = false;
-    tcp_socket_destroy(sock);
-    vTaskDelete(NULL);
-    return;
-  }
-
+  // ========================================
+  // 3단계: 연결 성공 후 상태 설정
+  // ========================================
+  LOG_INFO("NTRIP 초기 연결 완료!");
   g_ntrip_connected = true;
   base_auto_fix_on_ntrip_connected(true);
-  // gsm_socket_monitor_start();
+  led_set_color(LED_ID_1, LED_COLOR_YELLOW);
 
   // GGA 송신 태스크 생성
   if (g_gga_send_task_handle == NULL)
@@ -335,20 +421,6 @@ static void ntrip_tcp_recv_task(void *pvParameter)
                 tskIDLE_PRIORITY + 2, &g_gga_send_task_handle);
     LOG_INFO("GGA 송신 태스크 생성 완료");
   }
-
-  ret = tcp_send(sock, (const uint8_t *)g_ntrip_http_request,
-                 strlen(g_ntrip_http_request));
-  if (ret < 0)
-  {
-    LOG_ERR("HTTP 헤더 전송 실패: %d", ret);
-    tcp_close(sock);
-    tcp_socket_destroy(sock);
-    vTaskDelete(NULL);
-    return;
-  }
-
-  // ICY 200 OK\r\n\r\n 수신
-  ret = tcp_recv(sock, recv_buf, sizeof(recv_buf), 0);
 
   while (1)
   {
