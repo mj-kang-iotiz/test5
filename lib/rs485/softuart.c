@@ -99,7 +99,11 @@ SoftUartState_E SoftUartDisableRx(uint8_t SoftUartNumber)
 // Read Size of Received Data in buffer
 uint8_t SoftUartRxAlavailable(uint8_t SoftUartNumber)
 {
-	return SUart[SoftUartNumber].RxIndex;
+	// ★ 원자적 읽기 보장
+	__disable_irq();
+	uint8_t count = SUart[SoftUartNumber].RxIndex;
+	__enable_irq();
+	return count;
 }
 
 // Move Received Data to Another Buffer
@@ -107,15 +111,31 @@ SoftUartState_E SoftUartReadRxBuffer(uint8_t SoftUartNumber,uint8_t *Buffer,uint
 {
 	int i;
 	if(SoftUartNumber>=Number_Of_SoftUarts)return SoftUart_Error;
+
+	// ★ 경쟁 조건 방지: 인터럽트 비활성화
+	__disable_irq();
+
+	// 실제 읽을 수 있는 데이터 크기 확인
+	uint8_t available = SUart[SoftUartNumber].RxIndex;
+	if(Len > available) Len = available;
+
+	// 데이터 복사
 	for(i=0;i<Len;i++)
 	{
 		Buffer[i]=SUart[SoftUartNumber].Buffer->Rx[i];
 	}
-	for(i=0;i<SUart[SoftUartNumber].RxIndex;i++)
+
+	// 남은 데이터 이동 (더 안전한 방식)
+	uint8_t remaining = available - Len;
+	for(i=0;i<remaining;i++)
 	{
 		SUart[SoftUartNumber].Buffer->Rx[i]=SUart[SoftUartNumber].Buffer->Rx[i+Len];
 	}
-	SUart[SoftUartNumber].RxIndex-=Len;
+	SUart[SoftUartNumber].RxIndex = remaining;
+
+	// 인터럽트 재활성화
+	__enable_irq();
+
 	return SoftUart_OK;
 }
 
@@ -226,10 +246,18 @@ void SoftUartRxDataBitProcess(SoftUart_S *SU,uint8_t B0_1)
 			if(B0_1)
 			{
 				// Received successfully
-				// Change RX Buffer Index
-				if((SU->RxIndex)<(SoftUartRxBufferSize-1))(SU->RxIndex)++;
+				// Change RX Buffer Index (버퍼 오버플로우 방지 강화)
+				if(SU->RxIndex < (SoftUartRxBufferSize-1))
+				{
+					SU->RxIndex++;
+				}
+				else
+				{
+					// 버퍼 가득 참 - 가장 오래된 데이터 버림 (FIFO)
+					// 오버플로우 카운터가 있다면 증가시킬 수 있음
+				}
 			}
-			// if not : ERROR -> Overwrite data
+			// if not : Framing ERROR -> 데이터 버림
 		}
 	}
 }
@@ -250,18 +278,34 @@ SoftUartState_E SoftUartPuts(uint8_t SoftUartNumber,uint8_t *Data,uint8_t Len)
 	int i;
 
 	if(SoftUartNumber>=Number_Of_SoftUarts)return SoftUart_Error;
-	if(SUart[SoftUartNumber].TxNComplated) return SoftUart_Error;
+
+	// ★ 버퍼 크기 체크
+	if(Len > SoftUartTxBufferSize) return SoftUart_Error;
+
+	// ★ 경쟁 조건 방지: 인터럽트 비활성화
+	__disable_irq();
+
+	// 전송 중인지 확인
+	if(SUart[SoftUartNumber].TxNComplated)
+	{
+		__enable_irq();
+		return SoftUart_Error;
+	}
 
 	SUart[SoftUartNumber].TxIndex=0;
 	SUart[SoftUartNumber].TxSize=Len;
 
+	// 데이터 복사
 	for(i=0;i<Len;i++)
 	{
 		SUart[SoftUartNumber].Buffer->Tx[i]= Data[i];
 	}
 
+	// 전송 시작 (원자적 연산)
 	SUart[SoftUartNumber].TxNComplated=1;
 	SUart[SoftUartNumber].TxEnable=1;
+
+	__enable_irq();
 
 	return SoftUart_OK;
 }

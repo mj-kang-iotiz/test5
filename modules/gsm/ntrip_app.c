@@ -324,6 +324,7 @@ static void ntrip_tcp_recv_task(void *pvParameter)
     if (!g_gga_send_queue)
     {
       LOG_ERR("GGA 전송 큐 생성 최종 실패 - 태스크 종료");
+      g_ntrip_recv_task_handle = NULL;  // 핸들 무효화
       vTaskDelete(NULL);
       return;
     }
@@ -378,6 +379,7 @@ static void ntrip_tcp_recv_task(void *pvParameter)
       tcp_socket_destroy(sock);
       g_ntrip_socket = NULL;
     }
+    g_ntrip_recv_task_handle = NULL;  // 핸들 무효화
     vTaskDelete(NULL);
     return;
   }
@@ -543,6 +545,7 @@ static void ntrip_tcp_recv_task(void *pvParameter)
   tcp_close(sock);
   tcp_socket_destroy(sock);
 
+  g_ntrip_recv_task_handle = NULL;  // 핸들 무효화
   vTaskDelete(NULL);
 }
 
@@ -599,44 +602,43 @@ void ntrip_stop(void)
 {
     LOG_INFO("NTRIP 중지 시작...");
 
- 
-
   // 연결 상태 플래그 리셋 (태스크들이 루프를 빠져나가도록)
-
   g_ntrip_connected = false;
-
- 
 
   // ★ 중요: 태스크를 먼저 삭제한 후 소켓/큐를 정리해야 함
 
   // 1. 수신 태스크 삭제 (tcp_recv를 더 이상 호출하지 않도록)
-
   if (g_ntrip_recv_task_handle != NULL)
-
   {
-
-    vTaskDelete(g_ntrip_recv_task_handle);
-
+    // 태스크 유효성 확인 후 삭제
+    eTaskState state = eTaskGetState(g_ntrip_recv_task_handle);
+    if (state != eDeleted && state != eInvalid)
+    {
+      vTaskDelete(g_ntrip_recv_task_handle);
+      LOG_INFO("NTRIP 수신 태스크 삭제");
+    }
+    else
+    {
+      LOG_INFO("NTRIP 수신 태스크 이미 종료됨");
+    }
     g_ntrip_recv_task_handle = NULL;
-
-    LOG_INFO("NTRIP 수신 태스크 삭제");
-
   }
 
- 
-
   // 2. GGA 송신 태스크 삭제
-
   if (g_gga_send_task_handle != NULL)
-
   {
-
-    vTaskDelete(g_gga_send_task_handle);
-
+    // 태스크 유효성 확인 후 삭제
+    eTaskState state = eTaskGetState(g_gga_send_task_handle);
+    if (state != eDeleted && state != eInvalid)
+    {
+      vTaskDelete(g_gga_send_task_handle);
+      LOG_INFO("GGA 송신 태스크 삭제");
+    }
+    else
+    {
+      LOG_INFO("GGA 송신 태스크 이미 종료됨");
+    }
     g_gga_send_task_handle = NULL;
-
-    LOG_INFO("GGA 송신 태스크 삭제");
-
   }
 
  
