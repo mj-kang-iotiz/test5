@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include "ble_app.h"
 #include "stdbool.h"
+#include "led.h"
 
 #ifndef TAG
 #define TAG "BASE_AUTO_FIX"
@@ -29,6 +30,7 @@
 static base_auto_fix_state_t state = BASE_AUTO_FIX_DISABLED;
 static uint8_t gps_id = 0;
 static TimerHandle_t averaging_timer = NULL;
+static TimerHandle_t status_timer = NULL;
 
 // 워커 태스크 및 이벤트 큐
 static TaskHandle_t worker_task = NULL;
@@ -51,6 +53,8 @@ static bool calculate_average_with_outlier_removal(void);
 static bool switch_to_base_fixed_mode(void);
 static void shutdown_ntrip_and_lte(void);
 static void base_auto_fix_worker_task(void *pvParameter);
+
+static void status_timer_callback(TimerHandle_t xTimer);
 
 /**
 
@@ -77,6 +81,21 @@ bool base_auto_fix_init(uint8_t id) {
       return false;
     }
   }
+
+  if (status_timer == NULL) {
+    status_timer = xTimerCreate("status_timer",
+                                    pdMS_TO_TICKS(10 * 1000),
+                                    pdTRUE,
+                                    NULL,
+                                    status_timer_callback);
+
+    if (status_timer == NULL) {
+      LOG_ERR("타이머 생성 실패");
+      return false;
+    }
+  }
+
+  xTimerStart(status_timer, 0);
 
   // 이벤트 큐 생성
   if (event_queue == NULL) {
@@ -306,6 +325,31 @@ static void averaging_timer_callback(TimerHandle_t xTimer) {
     LOG_ERR("워커 태스크에 이벤트 전송 실패");
     state = BASE_AUTO_FIX_FAILED;
   }
+}
+
+static void status_timer_callback(TimerHandle_t xTimer) {
+
+  uint8_t fix = gps_get_instance_handle(0)->nmea_data.gga.fix;
+  led_color_t gsm_status = led_get_color(LED_ID_1);
+
+  uint8_t connect_status = 2;
+
+  if(gsm_status == LED_COLOR_NONE || gsm_status == LED_COLOR_RED)
+  {
+    connect_status = 2;
+  }
+  else if(gsm_status == LED_COLOR_YELLOW)
+  {
+    connect_status = 1;
+  }
+  else if(gsm_status == LED_COLOR_GREEN)
+  {
+    connect_status = 0;
+  }
+
+  char buf[10];
+  sprintf(buf, "%d,%d\n\r", connect_status, fix);
+  ble_send(buf, strlen(buf), false);
 }
 
 
@@ -673,6 +717,10 @@ static void base_auto_fix_worker_task(void *pvParameter) {
           LOG_ERR("Base Fixed 모드 전환 실패");
           state = BASE_AUTO_FIX_FAILED;
           continue;
+        }
+        else
+        {
+          xTimerStop(status_timer, 0);
         }
 
         // NTRIP/LTE 종료 (블로킹 1.7초)

@@ -14,6 +14,7 @@
 #include <math.h>
 #include <stdio.h>
 #include "base_auto_fix.h"
+#include "ble_app.h"
 
 #ifndef TAG
   #define TAG "GPS_APP"
@@ -334,6 +335,15 @@ bool gps_configure_um982_base_mode_async(gps_id_t id, gps_init_callback_t callba
 static void basestation_init_complete(bool success, void *user_data) {
   gps_id_t id = (gps_id_t)(uintptr_t)user_data;
   LOG_INFO("GPS[%d] base station mode init %s", id, success ? "succeeded" : "failed");
+
+  if(success)
+  {
+    ble_send("Start Base manual\n\r", strlen("Start Base manual\n\r"), false);
+  }
+  else
+  {
+    ble_send("Base manual failed\n\r", strlen("Base manual failed\n\r"), false);
+  }
 }
 
 static void baseline_init_complete(bool success, void *user_data) {
@@ -701,11 +711,16 @@ void callback_function(bool success, void *user_data) {
 
 void base_station_cb(bool success, size_t failed_step, void *user_data)
 {
-    if (success) {
-        LOG_INFO("UBX base설정 완료");
-    } else {
-        LOG_ERR("UBX base 설정 실패 at step %d", failed_step);
-    }
+  if(success)
+  {
+    LOG_INFO("UBX base설정 완료");
+    ble_send("Start Base manual\n\r", strlen("Start Base manual\n\r"), false);
+  }
+  else
+  {
+    LOG_ERR("UBX base 설정 실패 at step %d", failed_step);
+    ble_send("Base manual failed\n\r", strlen("Base manual failed\n\r"), false);
+  }
 }
 
 

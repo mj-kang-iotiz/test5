@@ -49,7 +49,7 @@ void gsm_start_rover(void) {
   }
   else
   {
-    gsm_port_power_on();
+    gsm_port_set_airplane_mode(false);
   }
 
   LOG_INFO("LTE 전원 ON 완료, RDY 대기 중...");

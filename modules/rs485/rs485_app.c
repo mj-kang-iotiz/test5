@@ -13,6 +13,7 @@
 #include "lora_app.h"
 #include "gsm_app.h"
 #include "gsm.h"
+#include "lte_init.h"
 
 #ifndef TAG
 #define TAG "RS485_APP"
@@ -290,6 +291,13 @@ static void send_gps_task(void *pvParameters)
   }
 }
 
+typedef enum
+{
+  RTK_ACTIVE_STATUS_NONE = 0,
+  RTK_ACTIVE_STATUS_LORA,
+  RTK_ACTIVE_STATUS_GSM,
+}rtk_active_status_t;
+
 static void rs485_task(void *pvParameter)
 {
   char ch;
@@ -302,6 +310,8 @@ static void rs485_task(void *pvParameter)
   user_params_t *params = flash_params_get_current();
 
   uint8_t dummy_buf[64];
+
+  rtk_active_status_t active_status = RTK_ACTIVE_STATUS_NONE;
 
   // 시스템 부팅 후 3초 대기 (초기화 완료 대기)
 
@@ -511,9 +521,13 @@ static void rs485_task(void *pvParameter)
 
       if (strncmp(cmd, "LTE", 3) == 0)
       {
-//        lora_instance_deinit();
+        if(active_status == RTK_ACTIVE_STATUS_LORA)
+        {
+          lora_instance_deinit();
+        }
         gsm_start_rover();
         RS485_Send("+GUGUSTART-LTE", strlen("+GUGUSTART-LTE"));
+        active_status = RTK_ACTIVE_STATUS_GSM;
         is_gugu_started = true;
       }
       else if (strncmp(cmd, "LORA", 4) == 0)
@@ -523,8 +537,13 @@ static void rs485_task(void *pvParameter)
 //        gsm_at_power_off(1);
 //        lte_reset_state();
 //        vTaskDelay(pdMS_TO_TICKS(2000));
+        if(active_status == RTK_ACTIVE_STATUS_GSM)
+        {
+
+        }
         lora_start_rover();
         RS485_Send("+GUGUSTART-LORA", strlen("+GUGUSTART-LORA"));
+        active_status = RTK_ACTIVE_STATUS_LORA;
         is_gugu_started = true;
       }
       else
@@ -535,7 +554,13 @@ static void rs485_task(void *pvParameter)
     else if (strncmp(rx_buffer, "AT+GUGUSTOP", 11) == 0)
     {
       is_gugu_started = false;
-      lora_instance_deinit();
+
+      if(active_status == RTK_ACTIVE_STATUS_LORA)
+      {
+        lora_instance_deinit();
+        active_status = RTK_ACTIVE_STATUS_NONE;
+        RS485_Send((uint8_t *)STOP_Response, strlen(STOP_Response));
+      }
       // ntrip_stop();
       // vTaskDelay(pdMS_TO_TICKS(100));
       // gsm_at_power_off(1);
@@ -543,7 +568,26 @@ static void rs485_task(void *pvParameter)
       // gsm_port_power_off();
       // lte_reset_state();
 
-      RS485_Send((uint8_t *)STOP_Response, strlen(STOP_Response));
+      else if(active_status == RTK_ACTIVE_STATUS_GSM)
+      {
+        if(lte_get_init_state() == LTE_INIT_DONE)
+        {
+          // gsm 초기화
+          ntrip_stop();
+          vTaskDelay(pdMS_TO_TICKS(100));
+          gsm_port_set_airplane_mode(true);
+          active_status = RTK_ACTIVE_STATUS_NONE;
+          RS485_Send((uint8_t *)STOP_Response, strlen(STOP_Response));
+        }
+        else
+        {
+          RS485_Send(ERROR3_Response, strlen(ERROR3_Response));
+        }
+      }
+      else
+      {
+        RS485_Send((uint8_t *)STOP_Response, strlen(STOP_Response));
+      }
     }
     else if (strncmp(rx_buffer, "AT+SAVE\r", 8) == 0)
     {

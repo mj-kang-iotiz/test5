@@ -14,6 +14,8 @@
 
 #define IS_ASCII(x) (((x) >= 32 && (x) <= 126) || (x) == '\r' || (x) == '\n')
 
+void handle_urc_qcfg(gsm_t *gsm, const char *data, size_t len);
+
 void handle_urc_rdy(gsm_t *gsm, const char *data, size_t len)
 {
   gsm->status.is_powerd = 1;
@@ -413,6 +415,20 @@ void handle_urc_qiurc(gsm_t *gsm, const char *data, size_t len) {
   }
 }
 
+void handle_urc_qcfg(gsm_t *gsm, const char *data, size_t len) {
+
+  // QCFG 응답은 READ 모드에서만 처리
+
+  if (gsm->current_cmd && gsm->current_cmd->cmd == GSM_CMD_QCFG) {
+
+    // 현재는 airplanecontrol만 지원하므로 별도 파싱 불필요
+
+    // 필요시 파싱 로직 추가
+
+  }
+
+}
+
 const urc_handler_entry_t urc_status_handlers[] = {
     {"RDY", handle_urc_rdy},
     {"POWERED DOWN", handle_urc_powered_down},
@@ -428,7 +444,9 @@ const urc_handler_entry_t urc_info_handlers[] = {
     {"+QISEND: ", handle_urc_qisend},   ///< 2.3.9
     {"+QIRD: ", handle_urc_qird},       ///< 2.3.10
     {"+QISTATE: ", handle_urc_qistate}, ///< 2.3.8
-    {"+QIURC: ", handle_urc_qiurc},     {NULL, NULL}};
+    {"+QIURC: ", handle_urc_qiurc},     
+    {"+QCFG: ", handle_urc_qcfg}, 
+    {NULL, NULL}};
 
 const gsm_at_cmd_entry_t gsm_at_cmd_handlers[] = {
     {GSM_CMD_NONE, NULL, NULL, 0},
@@ -451,6 +469,7 @@ const gsm_at_cmd_entry_t gsm_at_cmd_handlers[] = {
     {GSM_CMD_QISTATE, "AT+QISTATE", "+QISTATE: ", 300},
 
     {GSM_CMD_QICFG, "AT+QICFG", "+QICFG: ", 300},
+    {GSM_CMD_QCFG, "AT+QCFG", "+QCFG: ", 300},
 
     {GSM_CMD_NONE, NULL, NULL, 0}};
 
@@ -1498,4 +1517,16 @@ void gsm_send_at_qpowd(gsm_t *gsm, uint8_t mode, at_cmd_handler callback) {
   char params[4] = {0};
   snprintf(params, sizeof(params), "%d", mode);
   gsm_send_at_cmd(gsm, GSM_CMD_QPOWD, GSM_AT_WRITE, params, callback);
+}
+
+void gsm_send_at_qcfg_airplanecontrol(gsm_t *gsm, uint8_t mode, at_cmd_handler callback) {
+
+  char params[32] = {0};
+
+  // AT+QCFG="airplanecontrol",<mode>
+
+  snprintf(params, sizeof(params), "\"airplanecontrol\",%d", mode);
+
+  gsm_send_at_cmd(gsm, GSM_CMD_QCFG, GSM_AT_WRITE, params, callback);
+
 }

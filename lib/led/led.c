@@ -32,6 +32,11 @@ void led_set_color(led_id_t id, led_color_t color) {
   }
 }
 
+led_color_t led_get_color(led_id_t id)
+{
+  return led_handle[id - 1].color;
+}
+
 void _set_color(led_port_t *port, bool on_off) {
   if (on_off) {
     switch (port->color) {

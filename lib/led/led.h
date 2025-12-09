@@ -31,6 +31,7 @@ typedef struct {
   bool toggle;
 } led_port_t;
 
+led_color_t led_get_color(led_id_t id);
 void led_set_color(led_id_t id, led_color_t color);
 void led_set_state(led_id_t id, bool on_off);
 void led_set_toggle(led_id_t id);

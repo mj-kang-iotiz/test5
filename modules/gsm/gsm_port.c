@@ -137,10 +137,10 @@ void gsm_port_gpio_start(void) {
                     GPIO_PIN_RESET); // reset
   HAL_GPIO_WritePin(GSM_PORT_GPIO_PORT, GSM_PORT_GPIO_PWR_PIN,
                     GPIO_PIN_RESET); // pwr
-  vTaskDelay(pdMS_TO_TICKS(10));
+  HAL_Delay(pdMS_TO_TICKS(5));
   HAL_GPIO_WritePin(GSM_PORT_GPIO_PORT, GSM_PORT_GPIO_PWR_PIN,
                     GPIO_PIN_SET); // pwr
-  vTaskDelay(pdMS_TO_TICKS(200));
+  vTaskDelay(pdMS_TO_TICKS(1000));
   HAL_GPIO_WritePin(GSM_PORT_GPIO_PORT, GSM_PORT_GPIO_PWR_PIN,
                     GPIO_PIN_RESET); // pwr
 
@@ -263,11 +263,19 @@ void DMA2_Stream2_IRQHandler(void) {
 }
 
 void gsm_port_power_off(void) {
-// gsm_port_gpio_start();
   HAL_GPIO_WritePin(GSM_PORT_GPIO_PORT, GSM_PORT_GPIO_PWR_PIN, GPIO_PIN_SET);
-
-  vTaskDelay(pdMS_TO_TICKS(500));
-
+  vTaskDelay(pdMS_TO_TICKS(800));
   HAL_GPIO_WritePin(GSM_PORT_GPIO_PORT, GSM_PORT_GPIO_PWR_PIN, GPIO_PIN_RESET);
-   vTaskDelay(pdMS_TO_TICKS(2000));
+  vTaskDelay(pdMS_TO_TICKS(200));
+}
+
+void gsm_port_set_airplane_mode(uint8_t enable) {
+
+  if (enable) {
+    // W_DISABLE 핀 HIGH -> Airplane 모드 활성화 (무선 통신 차단)
+    HAL_GPIO_WritePin(GSM_PORT_GPIO_PORT, GSM_PORT_GPIO_AIRPLANE_PIN, GPIO_PIN_SET);
+  } else {
+    // W_DISABLE 핀 LOW -> Airplane 모드 비활성화 (정상 동작)
+    HAL_GPIO_WritePin(GSM_PORT_GPIO_PORT, GSM_PORT_GPIO_AIRPLANE_PIN, GPIO_PIN_RESET);
+  }
 }

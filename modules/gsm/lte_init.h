@@ -14,6 +14,7 @@ typedef enum {
   LTE_INIT_ECHO_OFF,      // ATE0 에코 비활성화
   LTE_INIT_CMEE_SET,      // AT+CMEE=2 설정
   LTE_INIT_QISDE_OFF,     // AT+QISDE=0 소켓 데이터 에코 비활성화
+  LTE_INIT_AIRPLANE_CTRL_SET,
   LTE_INIT_KEEPALIVE_SET, // AT+QICFG keep-alive 설정
   LTE_INIT_CPIN_CHECK,    // AT+CPIN? SIM 확인
   LTE_INIT_APN_SET,       // AT+CGDCONT APN 설정
@@ -81,5 +82,7 @@ void lte_network_check_timer_callback(TimerHandle_t xTimer);
 void lte_reinit_from_apn(void);
 
 void lte_reset_state(void);
+
+lte_init_state_t lte_get_init_state();
 
 #endif // LTE_INIT_H

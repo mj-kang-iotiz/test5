@@ -23,5 +23,6 @@ int gsm_port_power_on(void);
  * @return int 0: 성공
  */
 int gsm_port_reset(void);
+void gsm_port_set_airplane_mode(uint8_t enable);
 
 #endif
