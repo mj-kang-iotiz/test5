@@ -235,19 +235,66 @@ int get_line(uint8_t SoftUartNumber, char *buffer, int maxlen)
 {
   int index = 0;
   uint8_t ch;
+  int timeout_counter = 0;
+  const int MAX_TIMEOUT = 1000; // 3초 타임아웃 (3ms * 1000)
+  int invalid_char_count = 0;
+  const int MAX_INVALID_CHARS = 3; // 연속 3개 이상 잘못된 문자면 버퍼 플러시
 
   while (index < maxlen - 1)
   {
+    // 타임아웃 처리
     while (SoftUartRxAlavailable(SoftUartNumber) == 0)
     {
       vTaskDelay(pdMS_TO_TICKS(3));
+      timeout_counter++;
+      if (timeout_counter > MAX_TIMEOUT)
+      {
+        // 타임아웃 발생 - 수신된 데이터가 있으면 반환, 없으면 0 반환
+        buffer[index] = '\0';
+        return index;
+      }
     }
+
+    timeout_counter = 0; // 데이터 수신되면 타임아웃 카운터 리셋
     SoftUartReadRxBuffer(SoftUartNumber, &ch, 1);
 
-    buffer[index++] = ch;
+    // 유효한 문자인지 검증 (printable ASCII + CR)
+    // AT 커맨드는 영문자, 숫자, 일부 특수문자(+, =, :, ?, &, .), CR만 사용
+    if ((ch >= 'A' && ch <= 'Z') ||
+        (ch >= 'a' && ch <= 'z') ||
+        (ch >= '0' && ch <= '9') ||
+        ch == '+' || ch == '=' || ch == ':' ||
+        ch == '?' || ch == '&' || ch == '.' ||
+        ch == '-' || ch == '_' || ch == '\r')
+    {
+      buffer[index++] = ch;
+      invalid_char_count = 0; // 유효한 문자 수신되면 카운터 리셋
 
-    if (ch == '\r') // 종료 문자
-      break;
+      if (ch == '\r') // 종료 문자
+        break;
+    }
+    else
+    {
+      // 잘못된 문자 감지
+      invalid_char_count++;
+
+      // 연속으로 너무 많은 잘못된 문자가 들어오면 버퍼 플러시
+      if (invalid_char_count >= MAX_INVALID_CHARS)
+      {
+        // RX 버퍼 완전히 비우기
+        while (SoftUartRxAlavailable(SoftUartNumber) > 0)
+        {
+          uint8_t dummy;
+          SoftUartReadRxBuffer(SoftUartNumber, &dummy, 1);
+        }
+
+        // 버퍼 리셋
+        index = 0;
+        invalid_char_count = 0;
+        vTaskDelay(pdMS_TO_TICKS(10)); // 짧은 대기 후 재시작
+      }
+      // 단일 잘못된 문자는 무시하고 계속 진행
+    }
   }
 
   buffer[index] = '\0'; // 문자열 종료

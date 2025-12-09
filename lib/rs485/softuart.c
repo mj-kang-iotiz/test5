@@ -229,7 +229,12 @@ void SoftUartRxDataBitProcess(SoftUart_S *SU,uint8_t B0_1)
 				// Change RX Buffer Index
 				if((SU->RxIndex)<(SoftUartRxBufferSize-1))(SU->RxIndex)++;
 			}
-			// if not : ERROR -> Overwrite data
+			else
+			{
+				// Frame error: Stop bit is not 1
+				// Clear the invalid byte (don't increment RxIndex)
+				SU->Buffer->Rx[SU->RxIndex] = 0;
+			}
 		}
 	}
 }
