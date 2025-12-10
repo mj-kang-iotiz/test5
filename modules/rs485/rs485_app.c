@@ -209,18 +209,24 @@ void RS485_SetTransmitMode(void)
 {
   HAL_GPIO_WritePin(RS485_DE_PORT, RS485_DE_PIN, GPIO_PIN_SET); // DE=1, RE=1 (송신)
   HAL_GPIO_WritePin(RS485_RE_PORT, RS485_RE_PIN, GPIO_PIN_SET); // DE=1, RE=1 (송신)
-  delay_170ns();
-  delay_170ns();
-  delay_170ns();
-  delay_170ns();
-  delay_170ns();
+  // Wait for RS485 transceiver to stabilize (~5us)
+  for(volatile int i = 0; i < 100; i++) {
+    __NOP();
+  }
 }
 
 void RS485_SetReceiveMode(void)
 {
-  delay_170ns();
+  // Wait for last bit transmission to complete
+  for(volatile int i = 0; i < 50; i++) {
+    __NOP();
+  }
   HAL_GPIO_WritePin(RS485_DE_PORT, RS485_DE_PIN, GPIO_PIN_RESET); // DE=0, RE=0 (수신)
   HAL_GPIO_WritePin(RS485_RE_PORT, RS485_RE_PIN, GPIO_PIN_RESET); // DE=0, RE=0 (수신)
+  // Wait for RS485 transceiver to stabilize
+  for(volatile int i = 0; i < 50; i++) {
+    __NOP();
+  }
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)

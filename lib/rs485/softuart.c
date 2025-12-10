@@ -107,6 +107,10 @@ SoftUartState_E SoftUartReadRxBuffer(uint8_t SoftUartNumber,uint8_t *Buffer,uint
 {
 	int i;
 	if(SoftUartNumber>=Number_Of_SoftUarts)return SoftUart_Error;
+
+	// Enter critical section to protect buffer access
+	taskENTER_CRITICAL();
+
 	for(i=0;i<Len;i++)
 	{
 		Buffer[i]=SUart[SoftUartNumber].Buffer->Rx[i];
@@ -116,6 +120,10 @@ SoftUartState_E SoftUartReadRxBuffer(uint8_t SoftUartNumber,uint8_t *Buffer,uint
 		SUart[SoftUartNumber].Buffer->Rx[i]=SUart[SoftUartNumber].Buffer->Rx[i+Len];
 	}
 	SUart[SoftUartNumber].RxIndex-=Len;
+
+	// Exit critical section
+	taskEXIT_CRITICAL();
+
 	return SoftUart_OK;
 }
 
@@ -252,6 +260,9 @@ SoftUartState_E SoftUartPuts(uint8_t SoftUartNumber,uint8_t *Data,uint8_t Len)
 	if(SoftUartNumber>=Number_Of_SoftUarts)return SoftUart_Error;
 	if(SUart[SoftUartNumber].TxNComplated) return SoftUart_Error;
 
+	// Enter critical section to protect buffer access
+	taskENTER_CRITICAL();
+
 	SUart[SoftUartNumber].TxIndex=0;
 	SUart[SoftUartNumber].TxSize=Len;
 
@@ -262,6 +273,9 @@ SoftUartState_E SoftUartPuts(uint8_t SoftUartNumber,uint8_t *Data,uint8_t Len)
 
 	SUart[SoftUartNumber].TxNComplated=1;
 	SUart[SoftUartNumber].TxEnable=1;
+
+	// Exit critical section
+	taskEXIT_CRITICAL();
 
 	return SoftUart_OK;
 }
