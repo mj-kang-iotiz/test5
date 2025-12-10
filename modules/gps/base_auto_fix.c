@@ -524,53 +524,29 @@ static bool switch_to_base_fixed_mode(void) {
 
 
 
-  // 위도/경도/고도를 문자열로 변환 (NMEA 형식)
+  // 위도/경도/고도를 문자열로 변환 (Decimal Degrees 형식)
 
   char lat_str[32], lon_str[32], alt_str[32];
 
 
 
-  // 위도: DDMM.MMMMM 형식
+  // Decimal Degrees 형식으로 직접 변환
 
-  double lat_abs = fabs(avg_result.lat);
+  snprintf(lat_str, sizeof(lat_str), "%.10f", avg_result.lat);
 
-  int lat_deg = (int)lat_abs;
+  snprintf(lon_str, sizeof(lon_str), "%.10f", avg_result.lon);
 
-  double lat_min = (lat_abs - lat_deg) * 60.0;
-
-  snprintf(lat_str, sizeof(lat_str), "%02d%09.6f,%c",
-
-           lat_deg, lat_min, (avg_result.lat >= 0) ? 'N' : 'S');
+  snprintf(alt_str, sizeof(alt_str), "%.4f", avg_result.alt);
 
 
 
-  // 경도: DDDMM.MMMMM 형식
+  LOG_INFO("변환된 좌표 (Decimal Degrees):");
 
-  double lon_abs = fabs(avg_result.lon);
+  LOG_INFO("  Lat: %.10f", avg_result.lat);
 
-  int lon_deg = (int)lon_abs;
+  LOG_INFO("  Lon: %.10f", avg_result.lon);
 
-  double lon_min = (lon_abs - lon_deg) * 60.0;
-
-  snprintf(lon_str, sizeof(lon_str), "%03d%09.6f,%c",
-
-           lon_deg, lon_min, (avg_result.lon >= 0) ? 'E' : 'W');
-
-
-
-  // 고도: m
-
-  snprintf(alt_str, sizeof(alt_str), "%.3f", avg_result.alt);
-
-
-
-  LOG_INFO("변환된 좌표:");
-
-  LOG_INFO("  Lat: %s", lat_str);
-
-  LOG_INFO("  Lon: %s", lon_str);
-
-  LOG_INFO("  Alt: %s", alt_str);
+  LOG_INFO("  Alt: %.4f m", avg_result.alt);
 
 
 
