@@ -196,30 +196,7 @@ static int ntrip_connect_to_server(tcp_socket_t *sock)
     {
 
       LOG_DEBUG("TCP 연결 성공");
-
-      ret = tcp_send(sock, (const uint8_t *)g_ntrip_http_request,
-
-                     strlen(g_ntrip_http_request));
-
-      if (ret < 0)
-      {
-        LOG_ERR("HTTP 요청 전송 실패: %d", ret);
-        tcp_close_force(sock);
-        vTaskDelay(pdMS_TO_TICKS(1000));
-        retry_count++;
-        continue;
-      }
-
-      LOG_DEBUG("HTTP 요청 전송 완료 (%d bytes)", ret);
-
-      tcp_set_recv_timeout(sock, 10000);
-
-      ret = tcp_recv(sock, recv_buf, sizeof(recv_buf), 0);
-      if (ret > 0)
-      {
-        led_set_color(LED_ID_1, LED_COLOR_YELLOW);
-        return 0; // 연결 성공
-      }
+      return 0; // 연결 성공
     }
 
     LOG_WARN("TCP 연결 실패 (ret=%d), 강제 닫기 후 재시도...", ret);
