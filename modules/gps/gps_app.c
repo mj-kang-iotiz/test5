@@ -827,7 +827,12 @@ static void gps_process_task(void *pvParameter) {
         }
         else if(config->board == BOARD_TYPE_BASE_F9P || config->board == BOARD_TYPE_BASE_UM982)
         {
-            led_set_color(2, LED_COLOR_YELLOW);
+            // FIXED MODE인 경우 (HDOP 99.0 이상) GREEN으로 표시
+            if (inst->gps.nmea_data.gga.hdop >= 99.0) {
+                led_set_color(2, LED_COLOR_GREEN);
+            } else {
+                led_set_color(2, LED_COLOR_YELLOW);
+            }
         }
       }
     } else if(inst->gps.nmea_data.gga.fix == GPS_FIX_MANUAL_POS)
