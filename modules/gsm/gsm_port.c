@@ -33,8 +33,9 @@ void gsm_dma_init(void) {
   __HAL_RCC_DMA2_CLK_ENABLE();
 
   /* DMA2_Stream2_IRQn interrupt configuration */
+  /* Priority 6: Lower than TIM1(4) to prevent blocking SoftUART timing */
   NVIC_SetPriority(DMA2_Stream2_IRQn,
-                   NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 5, 0));
+                   NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 6, 0));
   NVIC_EnableIRQ(DMA2_Stream2_IRQn);
 }
 
