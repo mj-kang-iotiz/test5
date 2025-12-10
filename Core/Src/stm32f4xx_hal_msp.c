@@ -95,7 +95,9 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* htim_base)
     /* Peripheral clock enable */
     __HAL_RCC_TIM1_CLK_ENABLE();
     /* TIM1 interrupt Init */
-    HAL_NVIC_SetPriority(TIM1_UP_TIM10_IRQn, 4, 0);
+    /* Priority 0, SubPriority 0: Highest priority for SoftUART timing */
+    /* WARNING: Cannot use FreeRTOS API calls at this priority level */
+    HAL_NVIC_SetPriority(TIM1_UP_TIM10_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(TIM1_UP_TIM10_IRQn);
     /* USER CODE BEGIN TIM1_MspInit 1 */
 
