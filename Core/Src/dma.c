@@ -43,23 +43,23 @@ void MX_DMA_Init(void) {
   __HAL_RCC_DMA1_CLK_ENABLE();
 
   /* DMA interrupt init */
-  /* Priority 1: Lower than TIM1(0), no FreeRTOS API calls */
+  /* Priority 4: Lower than TIM1(0), no FreeRTOS API calls */
   /* DMA1_Stream0_IRQn interrupt configuration - UART5 RX */
-  HAL_NVIC_SetPriority(DMA1_Stream0_IRQn, 1, 0);
+  HAL_NVIC_SetPriority(DMA1_Stream0_IRQn, 4, 0);
   HAL_NVIC_EnableIRQ(DMA1_Stream0_IRQn);
   /* DMA1_Stream1_IRQn interrupt configuration - USART3 RX */
-  HAL_NVIC_SetPriority(DMA1_Stream1_IRQn, 1, 0);
+  HAL_NVIC_SetPriority(DMA1_Stream1_IRQn, 4, 0);
   HAL_NVIC_EnableIRQ(DMA1_Stream1_IRQn);
   /* DMA1_Stream2_IRQn interrupt configuration - UART4 RX */
-  HAL_NVIC_SetPriority(DMA1_Stream2_IRQn, 1, 0);
+  HAL_NVIC_SetPriority(DMA1_Stream2_IRQn, 4, 0);
   HAL_NVIC_EnableIRQ(DMA1_Stream2_IRQn);
   /* DMA1_Stream5_IRQn interrupt configuration - USART2 RX */
-  HAL_NVIC_SetPriority(DMA1_Stream5_IRQn, 1, 0);
+  HAL_NVIC_SetPriority(DMA1_Stream5_IRQn, 4, 0);
   HAL_NVIC_EnableIRQ(DMA1_Stream5_IRQn);
   /* DMA2_Stream2_IRQn interrupt configuration - USART1 RX */
-  /* Priority 6: Uses FreeRTOS API (xQueueSendFromISR), must be >= 4 */
+  /* Priority 5: Uses FreeRTOS API (xQueueSendFromISR), must be >= 4 */
   NVIC_SetPriority(DMA2_Stream2_IRQn,
-                   NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 6, 0));
+                   NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 5, 0));
   NVIC_EnableIRQ(DMA2_Stream2_IRQn);
 }
 

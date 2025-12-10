@@ -41,8 +41,8 @@ static void ble_uart5_dma_init(void)
   LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_DMA1);
 
   /* DMA interrupt init - 우선순위만 설정, IRQ는 나중에 활성화 */
-  /* Priority 1: Lower than TIM1(0), no FreeRTOS API calls */
-  NVIC_SetPriority(DMA1_Stream0_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 1, 0));
+  /* Priority 4: Lower than TIM1(0), no FreeRTOS API calls */
+  NVIC_SetPriority(DMA1_Stream0_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 4, 0));
   /* NVIC_EnableIRQ는 comm_start에서 호출 */
 }
 
