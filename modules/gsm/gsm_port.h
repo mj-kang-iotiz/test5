@@ -1,6 +1,7 @@
 #ifndef GSM_PORT_H
 #define GSM_PORT_H
 
+#include <stdbool.h>
 #include "gsm_app.h"
 
 void gsm_dma_init(void);
@@ -24,5 +25,6 @@ int gsm_port_power_on(void);
  */
 int gsm_port_reset(void);
 void gsm_port_set_airplane_mode(uint8_t enable);
+bool gsm_port_get_airplane_mode(void);
 
 #endif

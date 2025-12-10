@@ -35,6 +35,7 @@ static bool gps_init_um982_base_surveyin_async_internal(gps_id_t id, uint32_t ti
 
                                                          gps_init_callback_t callback, void *user_data);
 
+
 typedef struct {
   int32_t lon[HP_AVG_SIZE];
   int32_t lat[HP_AVG_SIZE];
@@ -330,6 +331,19 @@ bool gps_configure_um982_base_mode_async(gps_id_t id, gps_init_callback_t callba
   // }
 }
 
+static void baseline_init_complete(bool success, void *user_data) {
+  gps_id_t id = (gps_id_t)(uintptr_t)user_data;
+  LOG_INFO("GPS[%d] baseline mode init %s", id, success ? "succeeded" : "failed");
+}
+
+
+ void gps_set_heading_length()
+{
+  user_params_t* params = flash_params_get_current();
+  gps_config_heading_length_async(0, params->baseline_len, params->baseline_len*0.2, baseline_init_complete, (void*)0);
+}
+
+
 #if defined(BOARD_TYPE_BASE_UNICORE) || defined(BOARD_TYPE_ROVER_UNICORE)
 
 static void basestation_init_complete(bool success, void *user_data) {
@@ -344,11 +358,6 @@ static void basestation_init_complete(bool success, void *user_data) {
   {
     ble_send("Base manual failed\n\r", strlen("Base manual failed\n\r"), false);
   }
-}
-
-static void baseline_init_complete(bool success, void *user_data) {
-  gps_id_t id = (gps_id_t)(uintptr_t)user_data;
-  LOG_INFO("GPS[%d] baseline mode init %s", id, success ? "succeeded" : "failed");
 }
 
 static void overall_init_complete(bool success, void *user_data) {
@@ -369,6 +378,8 @@ static void overall_init_complete(bool success, void *user_data) {
     gps_config_heading_length_async(0, params->baseline_len, params->baseline_len*0.2, baseline_init_complete, (void *)(uintptr_t)id);
   }
  }
+
+
 #endif
 
 static void gps_init_command_callback(bool success, void *user_data) {
@@ -1401,3 +1412,6 @@ bool gps_config_heading_length_async(gps_id_t id, float baseline_len, float slav
   return true;
 
 }
+
+
+

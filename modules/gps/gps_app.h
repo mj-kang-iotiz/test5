@@ -88,4 +88,6 @@ bool gps_format_position_data(char *buffer);
 bool gps_config_heading_length_async(gps_id_t id, float baseline_len, float slave_distance,
                                      gps_command_callback_t callback, void *user_data);
 
+ void gps_set_heading_length();                                    
+
 #endif
