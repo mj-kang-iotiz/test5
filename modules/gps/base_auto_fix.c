@@ -334,17 +334,18 @@ static void status_timer_callback(TimerHandle_t xTimer) {
 
   uint8_t connect_status = 2;
 
-  if(gsm_status == LED_COLOR_NONE || gsm_status == LED_COLOR_RED)
+  // 0: 접속 중, 1: 접속 성공 (RTCM 수신), 2: 접속 실패
+  if(gsm_status == LED_COLOR_NONE)
   {
-    connect_status = 2;
+    connect_status = 2;  // 접속 실패 또는 미시작
   }
-  else if(gsm_status == LED_COLOR_YELLOW)
+  else if(gsm_status == LED_COLOR_RED || gsm_status == LED_COLOR_YELLOW)
   {
-    connect_status = 1;
+    connect_status = 0;  // 접속 중 (TCP 연결 시도 또는 연결됨)
   }
   else if(gsm_status == LED_COLOR_GREEN)
   {
-    connect_status = 0;
+    connect_status = 1;  // 접속 성공 (RTCM 수신 중)
   }
 
   char buf[10];

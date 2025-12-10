@@ -1084,6 +1084,9 @@ void lora_instance_init(void)
 
   instance.initialized = true;
 
+  // LoRa 태스크 생성 성공 시 LED 켜기
+  led_set_color(LED_ID_3, LED_COLOR_GREEN);
+
   LOG_INFO("LORA 인스턴스 초기화 완료");
 }
 
@@ -1472,9 +1475,9 @@ void lora_instance_deinit(void) {
   // 7. RTCM 재조립 버퍼 초기화
 
   memset(&instance.rtcm_reassembly, 0, sizeof(instance.rtcm_reassembly));
- 
-  led_set_color(3, LED_COLOR_NONE);
-  led_set_state(3, false);
+
+  // LoRa 태스크 삭제 시 LED 끄기
+  led_set_color(LED_ID_3, LED_COLOR_NONE);
 
   LOG_INFO("LoRa 인스턴스 중지 완료");
 
