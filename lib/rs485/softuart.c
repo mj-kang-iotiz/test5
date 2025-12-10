@@ -71,6 +71,11 @@ SoftUartState_E SoftUartInit(uint8_t SoftUartNumber,GPIO_TypeDef *TxPort,uint16_
 	SUart[SoftUartNumber].RxTimingFlag=0;
 	SUart[SoftUartNumber].RxBitOffset=0;
 
+	SUart[SoftUartNumber].RxSampleCount=0;
+	SUart[SoftUartNumber].RxSamples[0]=0;
+	SUart[SoftUartNumber].RxSamples[1]=0;
+	SUart[SoftUartNumber].RxSamples[2]=0;
+
 	return SoftUart_OK;
 }
 
@@ -277,15 +282,13 @@ uint8_t SoftUartScanRxPorts(void)
 		// Read RX GPIO Value
 		Bit=SoftUartGpioReadPin(SUart[i].RxPort,SUart[i].RxPin);
 
-		// Starting conditions
+		// Starting conditions - detect falling edge (start bit = 0)
 		if(!SUart[i].RxBitCounter && !SUart[i].RxTimingFlag && !Bit)
 		{
-			// Save RX Bit Offset
-			// Calculate middle position of data pulse
-			// Changed from +2 to +3 for better alignment with bit centers
-			// +2: samples at 0.4, 1.4, 2.4... (off by 0.1 bit)
-			// +3: samples at 0.6, 1.6, 2.6... (closer to 0.5, 1.5, 2.5...)
-			SUart[i].RxBitOffset=((SU_Timer+3)%5);
+			// Save current timing as start bit reference point
+			// Data bits will be sampled at offset+2, offset+3, offset+4
+			// which corresponds to 40%, 60%, 80% of bit period
+			SUart[i].RxBitOffset = SU_Timer;
 
 			// Timing Offset is Set
 			SUart[i].RxTimingFlag=1;
@@ -303,16 +306,47 @@ void SoftUartHandler(void)
 {
 	int     	i;
 	uint8_t 	SU_DBuffer;
+	uint8_t 	RelativeTiming;
 
 	// Capture RX and Get BitOffset
 	SU_DBuffer = SoftUartScanRxPorts();
 
 	for(i=0;i < Number_Of_SoftUarts;i++)
 	{
-		// Receive Data if we in middle data pulse position
-		if(SUart[i].RxBitOffset == SU_Timer)
+		// Calculate relative timing position within current bit (0-4)
+		RelativeTiming = (SU_Timer - SUart[i].RxBitOffset + 5) % 5;
+
+		// Collect samples at positions 2, 3, 4 (40%, 60%, 80% of bit period)
+		// This applies to all bits including start bit, data bits, parity, and stop bit
+		if(SUart[i].RxTimingFlag)
 		{
-			SoftUartRxDataBitProcess(&SUart[i],((SU_DBuffer>>i)&0x01));
+			if(RelativeTiming == 2)
+			{
+				// First sample
+				SUart[i].RxSamples[0] = ((SU_DBuffer>>i)&0x01);
+				SUart[i].RxSampleCount = 1;
+			}
+			else if(RelativeTiming == 3)
+			{
+				// Second sample
+				SUart[i].RxSamples[1] = ((SU_DBuffer>>i)&0x01);
+				SUart[i].RxSampleCount = 2;
+			}
+			else if(RelativeTiming == 4)
+			{
+				// Third sample
+				SUart[i].RxSamples[2] = ((SU_DBuffer>>i)&0x01);
+				SUart[i].RxSampleCount = 3;
+
+				// Perform majority voting (2 out of 3)
+				uint8_t bit_value = (SUart[i].RxSamples[0] + SUart[i].RxSamples[1] + SUart[i].RxSamples[2]) >= 2 ? 1 : 0;
+
+				// Process the bit with majority result
+				SoftUartRxDataBitProcess(&SUart[i], bit_value);
+
+				// Reset sample counter
+				SUart[i].RxSampleCount = 0;
+			}
 		}
 	}
 

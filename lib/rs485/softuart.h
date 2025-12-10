@@ -49,6 +49,8 @@ typedef struct {
 	uint16_t 		RxPin;
 	uint8_t 		RxTimingFlag;
 	uint8_t 		RxBitOffset;
+	uint8_t 		RxSamples[3];  // Store 3 samples for majority voting
+	uint8_t 		RxSampleCount; // Current sample count (0-3)
 } SoftUart_S;
 
 //Call Every (0.2)*(1/9600) = 20.83 uS
