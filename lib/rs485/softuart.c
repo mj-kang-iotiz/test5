@@ -281,8 +281,11 @@ uint8_t SoftUartScanRxPorts(void)
 		if(!SUart[i].RxBitCounter && !SUart[i].RxTimingFlag && !Bit)
 		{
 			// Save RX Bit Offset
-			// Calculate middle position of data puls
-			SUart[i].RxBitOffset=((SU_Timer+2)%5);
+			// Calculate middle position of data pulse
+			// Changed from +2 to +3 for better alignment with bit centers
+			// +2: samples at 0.4, 1.4, 2.4... (off by 0.1 bit)
+			// +3: samples at 0.6, 1.6, 2.6... (closer to 0.5, 1.5, 2.5...)
+			SUart[i].RxBitOffset=((SU_Timer+3)%5);
 
 			// Timing Offset is Set
 			SUart[i].RxTimingFlag=1;
